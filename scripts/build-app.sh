@@ -5,7 +5,7 @@
 #   UNIVERSAL=1 scripts/build-app.sh   try arm64 + x86_64, fall back to native
 #
 # Output:
-#   build/Headroom.app   menu bar app, ad-hoc signed
+#   build/Headroom.app   menu bar app, ad-hoc signed (CLI also in Contents/Helpers)
 #   build/headroom       command line tool
 set -euo pipefail
 
@@ -112,7 +112,11 @@ else
 fi
 
 # --- CLI ----------------------------------------------------------------------
+# Standalone copy, plus one inside the bundle so the release zip carries it too:
+#   ln -s /Applications/Headroom.app/Contents/Helpers/headroom ~/.local/bin/headroom
 cp "$STAGE/headroom" "$BUILD_DIR/headroom"
+mkdir -p "$APP/Contents/Helpers"
+cp "$STAGE/headroom" "$APP/Contents/Helpers/headroom"
 rm -rf "$STAGE"
 
 # --- sign ---------------------------------------------------------------------
