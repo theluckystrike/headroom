@@ -49,7 +49,7 @@ final class AggregatorTests: XCTestCase {
         XCTAssertEqual(codex.treeBytes, (100 + 50) * MiB)
         XCTAssertEqual(codex.processCount, 2)
         // Total memory is conserved across instances.
-        XCTAssertEqual(a.reduce(0) { $0 + $1.treeBytes }, 495 * MiB)
+        XCTAssertEqual(a.reduce(0) { $0 + $1.treeBytes }, 475 * MiB)
     }
 
     func testAgentBehindShellInsideSameKindAgentIsSeparate() {

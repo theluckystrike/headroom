@@ -11,34 +11,27 @@ public enum AgentClassifier {
         let name = basename(p.name)
         if name.isEmpty { return nil }
 
-        // Global exclusions: the Claude desktop app and its helpers, browser bridge hosts.
-        if p.args.first?.contains("/Claude.app/") == true { return nil }
-        if name.contains("chrome-native-host") { return nil }
-        if p.args.contains(where: { $0.contains("chrome-native-host") }) { return nil }
-        // Shells and multiplexers only wrap the agent; the real agent is their child.
-        if wrapperNames.contains(name.lowercased()) { return nil }
+        // Cheap gate first: almost every process on a Mac is rejected by one dictionary lookup
+        // or one prefix check. Shells and multiplexers (zsh -c "claude ...", tmux new-session claude)
+        // never pass it: they only wrap the agent, the real agent is their child.
+        let native = nativeNames[name] // case-sensitive: "Claude" with a capital C is the desktop app
+        let lower = native == nil ? name.lowercased() : name
+        let isJS = native == nil && (lower == "node" || lower == "bun" || lower == "nodejs")
+        let isPython = native == nil && !isJS && lower.hasPrefix("python")
+        if native == nil && !isJS && !isPython { return nil }
 
-        // Native binaries, matched by exact (case-sensitive) basename. "Claude" with a capital C is the desktop app.
-        if let kind = nativeNames[name] {
+        // Global exclusions: the Claude desktop app bundle and browser bridge hosts.
+        if p.args.first.map { has($0, "/Claude.app/") } == true { return nil }
+        if p.args.contains(where: { has($0, "chrome-native-host") }) { return nil }
+
+        if let kind = native {
             return acceptNative(kind, rest: Array(p.args.dropFirst())) ? kind : nil
         }
-
-        let lower = name.lowercased()
-        if lower == "node" || lower == "bun" || lower == "nodejs" {
-            return classifyScript(p.args, rules: jsRules)
-        }
-        if lower.hasPrefix("python") {
-            return classifyPython(p.args)
-        }
-        return nil
+        if isJS { return classifyScript(p.args, rules: jsRules) }
+        return classifyPython(p.args)
     }
 
     // MARK: - Tables
-
-    static let wrapperNames: Set<String> = [
-        "sh", "bash", "zsh", "fish", "dash", "ksh", "tcsh", "csh", "nu", "login",
-        "tmux", "screen", "zellij", "env", "sudo", "nohup", "script", "caffeinate", "time",
-    ]
 
     static let nativeNames: [String: AgentKind] = [
         "claude": .claude,
@@ -111,7 +104,7 @@ public enum AgentClassifier {
     // MARK: - Rules
 
     static func acceptNative(_ kind: AgentKind, rest: [String]) -> Bool {
-        if let poison = poisonArgs[kind], rest.contains(where: { arg in poison.contains(where: { arg.contains($0) }) }) {
+        if let poison = poisonArgs[kind], rest.contains(where: { arg in poison.contains(where: { has(arg, $0) }) }) {
             return false
         }
         if let sub = firstPositional(rest), let deny = nonSessionSubcommands[kind], deny.contains(sub) {
@@ -127,7 +120,7 @@ public enum AgentClassifier {
         let script = args[idx]
         let base = stripExtension(basename(script))
         for rule in rules {
-            if rule.pathMarkers.contains(where: { script.contains($0) }) || rule.basenames.contains(base) {
+            if rule.pathMarkers.contains(where: { has(script, $0) }) || rule.basenames.contains(base) {
                 let rest = Array(args[(idx + 1)...])
                 return acceptNative(rule.kind, rest: rest) ? rule.kind : nil
             }
@@ -189,7 +182,32 @@ public enum AgentClassifier {
         return nil
     }
 
+    /// Byte-wise substring test. The stdlib's `String.contains(_:)` goes through the generic
+    /// string-processing engine and dominated the scan cost; argv is plain UTF-8, so bytes suffice.
+    static func has(_ haystack: String, _ needle: String) -> Bool {
+        var h = haystack, n = needle
+        return h.withUTF8 { hb in
+            n.withUTF8 { nb in
+                let hc = hb.count, nc = nb.count
+                if nc == 0 { return true }
+                if nc > hc { return false }
+                let first = nb[0]
+                var i = 0
+                while i <= hc - nc {
+                    if hb[i] == first {
+                        var j = 1
+                        while j < nc && hb[i + j] == nb[j] { j += 1 }
+                        if j == nc { return true }
+                    }
+                    i += 1
+                }
+                return false
+            }
+        }
+    }
+
     static func basename(_ path: String) -> String {
+        if !path.utf8.contains(UInt8(ascii: "/")) { return path }
         var s = Substring(path)
         while s.hasSuffix("/") { s = s.dropLast() }
         if let slash = s.lastIndex(of: "/") { return String(s[s.index(after: slash)...]) }

@@ -188,3 +188,16 @@ final class AgentClassifierTests: XCTestCase {
         XCTAssertEqual(AgentClassifier.basename(""), "")
     }
 }
+
+final class SubstringTests: XCTestCase {
+    func testHas() {
+        XCTAssertTrue(AgentClassifier.has("abc", ""))
+        XCTAssertTrue(AgentClassifier.has("abc", "abc"))
+        XCTAssertTrue(AgentClassifier.has("xxabcxx", "abc"))
+        XCTAssertTrue(AgentClassifier.has("aab", "ab"))
+        XCTAssertFalse(AgentClassifier.has("ab", "abc"))
+        XCTAssertFalse(AgentClassifier.has("", "a"))
+        XCTAssertFalse(AgentClassifier.has("abd", "abc"))
+        XCTAssertTrue(AgentClassifier.has("/Users/\u{00E9}l\u{00E8}ve/@openai/codex/bin", "@openai/codex/"))
+    }
+}
