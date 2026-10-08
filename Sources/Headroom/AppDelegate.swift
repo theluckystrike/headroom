@@ -106,8 +106,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refreshNow()
     }
 
-    @objc private func powerStateChanged(_ note: Notification) {
-        // Posted on an arbitrary thread.
+    /// Posted on an arbitrary thread, hence nonisolated: hop to main before touching any state.
+    @objc nonisolated private func powerStateChanged(_ note: Notification) {
         DispatchQueue.main.async { [weak self] in self?.updateAnimation() }
     }
 
@@ -118,10 +118,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.provider = provider
         let timer = DispatchSource.makeTimerSource(queue: probeQueue)
         timer.schedule(deadline: .now(), repeating: Self.probeInterval, leeway: .milliseconds(250))
-        timer.setEventHandler { [weak self] in
-            let snapshot = provider.snapshot()
-            DispatchQueue.main.async { self?.publish(snapshot) }
-        }
+        timer.setEventHandler(handler: probeJob(provider, settings: nil) { [weak self] snapshot in
+            self?.publish(snapshot)
+        })
         probeTimer = timer
         timer.resume()
     }
@@ -133,11 +132,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         guard let provider else { return }
         let newSettings = settings.headroomSettings
-        probeQueue.async { [weak self] in
-            provider.settings = newSettings
-            let snapshot = provider.snapshot()
-            DispatchQueue.main.async { self?.publish(snapshot) }
-        }
+        probeQueue.async(execute: probeJob(provider, settings: newSettings) { [weak self] snapshot in
+            self?.publish(snapshot)
+        })
     }
 
     /// Fixtures.demo with headroom and level recomputed for the current reserve, so the menu reacts.
@@ -262,5 +259,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         statusView.tick()
         menuBuilder.header.tick()
+    }
+}
+
+/// The work run on the probe queue. Built by a free function so the closure is never inferred to be
+/// main-actor isolated (AppDelegate is, through NSApplicationDelegate); `deliver` runs on main.
+private func probeJob(_ provider: LiveProvider, settings: HeadroomSettings?,
+                      deliver: @escaping (Snapshot) -> Void) -> () -> Void {
+    return {
+        if let settings { provider.settings = settings }
+        let snapshot = provider.snapshot()
+        DispatchQueue.main.async { deliver(snapshot) }
     }
 }
