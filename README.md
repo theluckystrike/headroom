@@ -1,20 +1,26 @@
 # Headroom
 
-How many more AI agents can your Mac take? A Matrix-style menu bar meter for agent fleets.
+A macOS menu bar meter that tells you how many more AI coding agents (Claude Code, Codex, Gemini CLI and friends) fit before your Mac starts swapping. Free and MIT, and the app never touches the network.
 
-![Headroom in the macOS menu bar on the author's Mac: 37 agents, 144 terminals, 5.2G free, 0 more agents fit, with the dropdown open](docs/screenshot.png)
+```sh
+curl -fsSL https://raw.githubusercontent.com/theluckystrike/headroom/main/install.sh | bash
+```
 
-That is a real capture from my Mac while writing this: 37 agents across 144 terminals, swap 92% full, and Headroom saying stop.
+That's the whole install. On Apple silicon it takes about 5 seconds and no Gatekeeper prompt appears. Details and other ways are under [Install](#install).
 
-Headroom is a tiny native macOS menu bar app. Swift and AppKit, no dependencies, macOS 13 or later. It counts the AI coding agents you have running, the terminal sessions they live in, and the memory you have left, and turns that into one number: how many more agents fit before the Mac starts swapping hard.
+<img src="docs/screenshot.png" width="420" alt="Headroom in the macOS menu bar on the author's Mac, 37 agents, 144 terminals, 5.2G free, 0 more agents fit, with the dropdown open">
+
+A real capture from my Mac while writing this. 37 agents across 144 terminals, swap 92% full, and Headroom saying stop.
+
+Headroom is a tiny native app. Swift and AppKit, no dependencies, macOS 13 or later. It counts the AI coding agents you have running, the terminal sessions they live in, and the memory you have left, and turns that into one number. How many more agents fit before the Mac starts swapping hard.
 
 Site: https://theluckystrike.github.io/headroom/
 
 ## Why
 
-I run a dozen Claude Code, Codex and Hermes agents at a time, spread across more than 100 terminal tabs, splits and tmux panes. On a 36 GB Mac that works until it does not: memory runs out, swap fills up, everything stalls, and sometimes the machine crashes and takes every session with it.
+I often run 30 or more Claude Code, Codex and Hermes agents at a time, spread across 140+ terminal tabs, splits and tmux panes. On a 36 GB Mac that works until it doesn't. Memory runs out, swap fills up, everything stalls, and sometimes the machine crashes and takes every session with it.
 
-Activity Monitor can tell you that memory is tight. It cannot tell you whether you can start one more agent. Headroom answers that question at a glance, in the menu bar, every two seconds.
+Activity Monitor can tell you that memory is tight. It can't tell you whether you can start one more agent. Headroom answers that question at a glance, in the menu bar, every two seconds.
 
 ## What it shows
 
@@ -27,35 +33,53 @@ AG 12  TTY 31  14.2G  +9
 | `AG 12` | Agents running. One agent is one root agent process plus everything it spawned (MCP servers, language servers, shells). |
 | `TTY 31` | Terminal sessions. One session is one tty: a tab, a split pane, or a tmux pane. |
 | `14.2G` | Available memory, counted the way Activity Monitor counts it: total minus app memory, wired and compressed. |
-| `+9` | How many more agents fit before the reserve is hit. This is the number to watch. |
+| `+9` | How many more agents fit before the reserve is hit. Watch this one. |
 
-The text sits in neon green `#00FF41` on a near-black pill with faint katakana rain behind it. The level has three states:
+The text sits in neon green `#00FF41` on a near-black pill with faint katakana rain behind it. The level has three states.
 
-- **ok**: 4 or more agents fit.
-- **tight**: 1 to 3 fit, or macOS reports warning memory pressure, or swap is 85% or more used.
-- **danger**: 0 fit, or macOS reports critical memory pressure, or swap is 85% or more used and the disk has under 10 GB left for swap to grow.
+- `ok` means 4 or more agents fit.
+- `tight` means 1 to 3 fit, or macOS reports warning memory pressure, or swap is 85% or more used.
+- `danger` means 0 fit, or macOS reports critical memory pressure, or swap is 85% or more used and the disk has under 10 GB left for swap to grow.
 
 Click the pill for the dropdown: agents per tool with their memory, sessions per terminal app, available memory, swap, pressure, and the per-agent estimate the number is based on.
 
 ## Install
 
-Requirements: macOS 13 or later and Xcode Command Line Tools (`xcode-select --install`). The full Xcode app is not needed.
-
-**One-liner**
-
 ```sh
 curl -fsSL https://raw.githubusercontent.com/theluckystrike/headroom/main/install.sh | bash
 ```
 
-This builds Headroom from source on your Mac with the Swift compiler that ships with the Command Line Tools. Because the app is built locally, there is no unsigned binary to download and no Gatekeeper prompt. Read [install.sh](install.sh) first if you like; it is short.
+On an Apple silicon Mac the installer downloads the latest [release](https://github.com/theluckystrike/headroom/releases/latest) zip, checks its SHA-256, puts `Headroom.app` in `~/Applications` and the `headroom` command in `~/.local/bin`, then starts the app. Files fetched with curl aren't quarantined, so macOS doesn't show a Gatekeeper warning. It takes a few seconds and needs nothing else installed. Read [install.sh](install.sh) first if you like.
 
-**From a clone**
+On an Intel Mac, or with `HEADROOM_BUILD=1` set, the same command builds from source instead. That needs the Xcode Command Line Tools (`xcode-select --install`, the full Xcode app isn't needed) and takes a minute or two.
+
+The pill appears on the right side of the menu bar. On a crowded menu bar or a notched MacBook it can be hidden behind the notch. Hold Cmd and drag it left, or quit a few other menu bar apps.
+
+### Download the zip by hand
+
+Get `Headroom-<version>-macos.zip` from [Releases](https://github.com/theluckystrike/headroom/releases/latest), unzip it and move `Headroom.app` to Applications. The app is ad-hoc signed and not notarized by Apple, so a copy downloaded with a browser is quarantined and macOS refuses to open it the first time. Clear the quarantine flag once.
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Headroom.app
+open /Applications/Headroom.app
+```
+
+Or without Terminal. On macOS 15 and later, open the app once, dismiss the warning, then go to System Settings > Privacy & Security, scroll down and click Open Anyway. On macOS 13 and 14 you can right-click the app and choose Open instead.
+
+The release zip is Apple silicon only. The `headroom` command ships inside the bundle.
+
+```sh
+mkdir -p ~/.local/bin
+ln -sf /Applications/Headroom.app/Contents/Helpers/headroom ~/.local/bin/headroom
+```
+
+### Build from a clone
 
 ```sh
 git clone https://github.com/theluckystrike/headroom && cd headroom && make install
 ```
 
-Both paths install `Headroom.app` and the `headroom` command line tool.
+Every path installs `Headroom.app` and the `headroom` command line tool.
 
 ## The math
 
@@ -72,7 +96,7 @@ headroom   = floor((available - reserve) / per_agent), never below 0; 0 under cr
 
 Worked example, measured on my 36 GB Mac on 2026-10-08: app memory 11.6G + wired 3.7G + compressed 13.8G = 29.1G used, so 6.9G available. 37 agents averaged 249M. Pressure was "warning", so the reserve was 6G: floor((6.9 - 6.0) / 0.249) = 3 more agents. A few minutes later available dropped to 5.3G and the answer became 0.
 
-The first version of Headroom used `kern.memorystatus_level`, the figure `memory_pressure` prints. On the same Mac it said 45% free (16.2G) while the compressor held 13.8G of RAM and swap was 91% full, and the estimate came out at +69 agents. That number would have crashed the machine, so Headroom now uses the stricter count.
+The first version of Headroom used `kern.memorystatus_level`, the figure `memory_pressure` prints. On the same Mac that day it said 45% free (16.2G), while Activity Monitor's count was 5.3G to 6.9G, the compressor held 13.8G of RAM and swap was 91% full. The estimate came out at +69 agents. That number would have crashed the machine, so Headroom now uses the stricter count.
 
 The reserve covers the OS, your browser, and the bursts agents make when they run tests or builds. The default per-agent cost is only used until at least one agent is running to measure. The reserve, the default per-agent cost and the swap threshold are settings.
 
@@ -86,7 +110,7 @@ The reserve covers the OS, your browser, and the bursts agents make when they ru
 | Copilot CLI | Droid | Crush |
 | Qwen Code | | |
 
-Headroom recognizes the root process of an interactive or headless session and folds its whole process tree into one agent. Helpers such as app-server daemons, MCP servers and native messaging hosts are counted inside the agent that started them, not as agents of their own. An agent started by another agent counts as its own agent and is not double counted in its parent's memory.
+Headroom recognizes the root process of an interactive or headless session and folds its whole process tree into one agent. Helpers such as app-server daemons, MCP servers and native messaging hosts are counted inside the agent that started them, not as agents of their own. An agent started by another agent counts as its own agent and isn't double counted in its parent's memory.
 
 Missing your agent? Open an issue with the output of `ps -o pid,ppid,comm,args -U $USER | grep <name>` while it runs.
 
@@ -107,14 +131,14 @@ headroom --json     # full snapshot as JSON, for scripts
 headroom --watch    # refresh in place every 2 seconds
 ```
 
-**tmux status bar.** In `~/.tmux.conf`:
+For the tmux status bar, add this to `~/.tmux.conf`.
 
 ```tmux
 set -g status-interval 5
 set -g status-right '#(headroom --line)'
 ```
 
-**Claude Code statusLine.** In `~/.claude/settings.json`:
+For the Claude Code status line, add this to `~/.claude/settings.json`.
 
 ```json
 {
@@ -129,7 +153,7 @@ Every Claude Code session then shows the fleet and how many more agents fit, rig
 
 ## Privacy
 
-- No network access. Headroom does not open a single connection.
+- No network access. Headroom doesn't open a single connection.
 - No telemetry, no analytics, no crash reporter.
 - It reads only process names, arguments and memory figures of processes owned by your own user, plus system memory counters. It never reads file contents, terminal output or your prompts.
 
@@ -141,7 +165,11 @@ Every Claude Code session then shows the fleet and how many more agents fit, rig
 
 ## Uninstall
 
-Quit Headroom from its menu, then:
+```sh
+curl -fsSL https://raw.githubusercontent.com/theluckystrike/headroom/main/uninstall.sh | bash
+```
+
+That quits the app and removes the app, the `headroom` command, `~/.headroom` and the app's preferences. To do it by hand, quit Headroom from its menu, then run this.
 
 ```sh
 rm -rf /Applications/Headroom.app ~/Applications/Headroom.app
@@ -152,20 +180,25 @@ If you added it as a login item, remove it in System Settings > General > Login 
 
 ## FAQ
 
-**Why not just use Activity Monitor?**
-Activity Monitor shows processes, not agents. A single Claude Code session can be a dozen processes: node, several MCP servers, a language server, shells. Activity Monitor also does not know which of your 130 ttys hold agents, and it does not do the division for you. Headroom answers one question, "can I start one more?", without opening a window.
+### Why not just use Activity Monitor
 
-**Why not "free" memory, or `kern.memorystatus_level`?**
-Free memory on macOS is close to zero most of the time by design: the kernel keeps file cache around until something needs the space, so it undercounts. `kern.memorystatus_level` overcounts once the compressor is large: on my Mac it said 45% free while the compressor already held 13.8G of RAM and swap was 91% full. Total minus app memory, wired and compressed is the figure Activity Monitor uses, and it stays honest when the compressor is full.
+Activity Monitor shows processes, not agents. A single Claude Code session can be a dozen processes: node, several MCP servers, a language server, shells. Activity Monitor also doesn't know which of your 144 ttys hold agents, and it doesn't do the division for you. Headroom answers one question, "can I start one more?", without opening a window.
 
-**Why can an agent be more than a process?**
-Because an agent is a tree, not a process. Claude Code roots are 120 to 390 MB each on my Mac, but the MCP servers, node and python children they spawn can double or triple that. Headroom measures the whole tree, because the whole tree is what the next agent will cost.
+### Why not free memory, or kern.memorystatus_level
 
-**Is the estimate exact?**
-No. It is the mean of what your agents use right now, so it adapts to how you work and heavy sessions pull it up. Agents that start builds or test suites spike above it, which is what the reserve is for. Raise the reserve if you still hit swap.
+Free memory on macOS is close to zero most of the time by design: the kernel keeps file cache around until something needs the space, so it undercounts. `kern.memorystatus_level` overcounts once the compressor is large, as [The math](#the-math) shows. Total minus app memory, wired and compressed is the figure Activity Monitor uses, and it stays honest when the compressor is full.
 
-**Does it work on Intel Macs?**
-It should; nothing in it is Apple silicon specific. It is developed and tested on M-series Macs.
+### An agent is a tree, not a process
+
+Claude Code roots are 120 to 390 MB each on my Mac, but the MCP servers, node and python children they spawn can double or triple that. Headroom measures the whole tree, because the whole tree is what the next agent will cost.
+
+### How exact the estimate is
+
+It isn't exact. It's the mean of what your agents use right now, so it adapts to how you work and heavy sessions pull it up. Agents that start builds or test suites spike above it, which is what the reserve is for. Raise the reserve if you still hit swap.
+
+### Intel Macs
+
+It should work. Nothing in it is Apple silicon specific, and the installer builds from source on Intel. It's developed and tested on M-series Macs.
 
 ## Contributing
 

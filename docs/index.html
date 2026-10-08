@@ -96,6 +96,9 @@ h1 {
 .tagline { margin: 18px auto 0; max-width: 640px; font-size: clamp(17px, 4.4vw, 22px); color: var(--ink); line-height: 1.45; }
 .sub { margin: 10px auto 0; max-width: 620px; color: var(--green-mute); font-size: 14px; }
 
+.hero-install { margin: 28px auto 0; max-width: 760px; text-align: left; }
+.hero-install .note { margin-top: 10px; }
+
 /* Terminal card */
 .card {
   margin: 40px auto 0;
@@ -275,6 +278,14 @@ footer .links { display: flex; justify-content: center; flex-wrap: wrap; gap: 18
       <p class="tagline">How many more AI agents can your Mac take?</p>
       <p class="sub">A Matrix-style menu bar meter for agent fleets. Claude Code, Codex, Gemini CLI, Hermes and friends, across every terminal you have open.</p>
 
+      <div class="hero-install" id="install">
+        <div class="install">
+          <code id="cmd">curl -fsSL https://raw.githubusercontent.com/theluckystrike/headroom/main/install.sh | bash</code>
+          <button class="copy" id="copy" type="button" aria-label="Copy install command">copy</button>
+        </div>
+        <p class="note">Paste it in Terminal. On Apple silicon it installs the latest release in about 5 seconds, checksum verified, with no Gatekeeper prompt. On Intel it builds from source with the Xcode Command Line Tools. Needs macOS 13 or later. Got the zip from a browser instead? <a href="https://github.com/theluckystrike/headroom#download-the-zip-by-hand">Here's how to open it</a>.</p>
+      </div>
+
       <div class="card" role="img" aria-label="Demo of the Headroom menu bar item updating with live numbers">
         <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">menu bar, live</span></div>
         <div class="menubar">
@@ -301,15 +312,6 @@ footer .links { display: flex; justify-content: center; flex-wrap: wrap; gap: 18
         </div>
       </div>
     </header>
-
-    <section id="install">
-      <h2>Install</h2>
-      <div class="install">
-        <code id="cmd">curl -fsSL https://raw.githubusercontent.com/theluckystrike/headroom/main/install.sh | bash</code>
-        <button class="copy" id="copy" type="button" aria-label="Copy install command">copy</button>
-      </div>
-      <p class="note">Builds from source with the Swift that ships with Xcode Command Line Tools, so there is no unsigned binary and no Gatekeeper prompt. Needs macOS 13 or later and <code>xcode-select --install</code>. Prefer to read first: <code>git clone https://github.com/theluckystrike/headroom &amp;&amp; cd headroom &amp;&amp; make install</code></p>
-    </section>
 
     <section id="features">
       <h2>What it does</h2>
