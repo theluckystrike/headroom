@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: macOS build, test, app bundle
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcode-select -p
+          swift --version
+
+      # build-app.sh builds the app and CLI products one at a time; see NOTES-ship.md
+      # for why (Headroom and headroom collide on case-insensitive APFS).
+      - name: Build Headroom.app
+        run: scripts/build-app.sh
+
+      - name: swift build -c release
+        run: swift build -c release
+
+      - name: swift test
+        run: swift test
+
+      - name: Check the bundle
+        run: |
+          set -euo pipefail
+          plutil -lint build/Headroom.app/Contents/Info.plist
+          test -x build/Headroom.app/Contents/MacOS/Headroom
+          test -x build/Headroom.app/Contents/Helpers/headroom
+          test -x build/headroom
+          if [ -f build/Headroom.app/Contents/Resources/AppIcon.icns ]; then echo "icon ok"; else echo "::warning::AppIcon.icns missing"; fi
+          codesign --verify --deep --strict --verbose=2 build/Headroom.app
+          lipo -archs build/Headroom.app/Contents/MacOS/Headroom
+          # The CLI should run headless and exit; do not fail CI if its flags change.
+          build/headroom --line || echo "::warning::headroom --line exited non-zero"
+
+      - name: Zip
+        run: make zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Headroom-macos
+          path: |
+            dist/*.zip
+            dist/*.sha256
+            build/headroom
+          if-no-files-found: error
+          retention-days: 14
+
+  linux-core:
+    name: Linux HeadroomCore build and tests
+    runs-on: ubuntu-latest
+    container: swift:5.10-jammy
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: swift --version
+      # The full package needs AppKit; this builds and tests HeadroomCore alone.
+      - name: Build and test HeadroomCore
+        run: scripts/test-core-linux.sh
+
+  scripts:
+    name: Shell and Python checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash -n
+        run: bash -n install.sh uninstall.sh scripts/*.sh
+      - name: shellcheck
+        run: shellcheck install.sh uninstall.sh scripts/*.sh
+      - name: Icon script compiles
+        run: python3 -m py_compile scripts/make_icon.py

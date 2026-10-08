@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build and release, e.g. v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: macos-14
+    timeout-minutes: 30
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Check tag matches Info.plist
+        run: |
+          set -euo pipefail
+          plist_version="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)"
+          if [ "v${plist_version}" != "${TAG}" ]; then
+            echo "::error::Tag ${TAG} does not match CFBundleShortVersionString ${plist_version} in Resources/Info.plist"
+            exit 1
+          fi
+          echo "VERSION=${plist_version}" >> "$GITHUB_ENV"
+
+      - name: Test
+        run: swift test
+
+      - name: Build and zip
+        run: |
+          set -euo pipefail
+          make zip
+          codesign --verify --deep --strict build/Headroom.app
+          ls -l dist
+
+      - name: Write release notes
+        run: |
+          set -euo pipefail
+          sha="$(cut -d' ' -f1 "dist/Headroom-${VERSION}-macos.zip.sha256")"
+          cat > dist/NOTES.md <<NOTES
+          Headroom ${VERSION}: a macOS menu bar app that shows how many more AI coding agents fit before your Mac starts swapping. Requires macOS 13 or newer.
+
+          ## Install (recommended)
+
+          \`\`\`
+          curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/install.sh | bash
+          \`\`\`
+
+          The installer builds Headroom on your Mac with the Xcode Command Line Tools, so Gatekeeper never quarantines it and no warning appears.
+
+          ## Download
+
+          \`Headroom-${VERSION}-macos.zip\` contains \`Headroom.app\`. The app is ad-hoc signed, not notarized by Apple, so a downloaded copy is quarantined. After unzipping and moving it to Applications, either right-click Headroom.app and choose Open (macOS 13 and 14; on macOS 15 and later, try to open it once, then click Open Anyway in System Settings > Privacy & Security), or run:
+
+          \`\`\`
+          xattr -dr com.apple.quarantine /Applications/Headroom.app
+          \`\`\`
+
+          The \`headroom\` command line tool ships inside the bundle:
+
+          \`\`\`
+          mkdir -p ~/.local/bin
+          ln -sf /Applications/Headroom.app/Contents/Helpers/headroom ~/.local/bin/headroom
+          headroom --line
+          \`\`\`
+
+          SHA-256 of the zip: \`${sha}\`
+          NOTES
+          cat dist/NOTES.md
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          assets=("dist/Headroom-${VERSION}-macos.zip" "dist/Headroom-${VERSION}-macos.zip.sha256")
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" "${assets[@]}" --clobber
+            gh release edit "${TAG}" --notes-file dist/NOTES.md
+          else
+            gh release create "${TAG}" "${assets[@]}" --title "Headroom ${VERSION}" --notes-file dist/NOTES.md
+          fi
