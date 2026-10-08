@@ -148,9 +148,10 @@ final class EstimatorTests: XCTestCase {
         XCTAssertEqual(s.memory, m)
         XCTAssertEqual(s.terminals, t)
         XCTAssertEqual(s.agents.map(\.pid), [10, 30, 20])
-        XCTAssertEqual(s.perAgentBytes, 600 * MiB)
-        // (10G - 3G) / 600M = 11.94 -> 11
-        XCTAssertEqual(s.headroomAgents, 11)
+        // Trees: 1000M (claude + its MCP child), 600M, 400M -> mean 2000M / 3.
+        XCTAssertEqual(s.perAgentBytes, 2000 * MiB / 3)
+        // (10G - 3G) / 666.7M = 10.75 -> 10
+        XCTAssertEqual(s.headroomAgents, 10)
         XCTAssertEqual(s.level, .ok)
     }
 
