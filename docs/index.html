@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Headroom</title>
+<meta name="description" content="How many more AI agents can your Mac take? Headroom is a tiny Matrix-style macOS menu bar meter that counts your Claude Code, Codex and Gemini CLI agents, your terminal sessions and free memory, and tells you how many more agents fit before the Mac starts swapping hard.">
+<meta name="theme-color" content="#030604">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://theluckystrike.github.io/headroom/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://theluckystrike.github.io/headroom/">
+<meta property="og:title" content="Headroom">
+<meta property="og:description" content="How many more AI agents can your Mac take? A Matrix-style menu bar meter for agent fleets.">
+<meta property="og:image" content="https://theluckystrike.github.io/headroom/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Headroom">
+<meta name="twitter:description" content="How many more AI agents can your Mac take? A Matrix-style menu bar meter for agent fleets.">
+<meta name="twitter:image" content="https://theluckystrike.github.io/headroom/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23050805'/%3E%3Ctext x='32' y='43' font-family='monospace' font-size='30' font-weight='700' fill='%2300FF41' text-anchor='middle'%3E+9%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #00ff41;
+  --green-dim: #4fd27a;
+  --green-mute: #7fae8b;
+  --ink: #d8f5df;
+  --bg: #030604;
+  --panel: rgba(6, 12, 8, 0.86);
+  --line: rgba(0, 255, 65, 0.18);
+  --amber: #ffcc33;
+  --red: #ff4d4d;
+  --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  --gutter: 16px;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-variant-ligatures: none;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+#rain {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+}
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 60% at 50% 38%, rgba(3, 6, 4, 0.9) 0%, rgba(3, 6, 4, 0.55) 55%, rgba(3, 6, 4, 0.2) 100%);
+}
+main, footer { position: relative; z-index: 1; }
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 var(--gutter); }
+a { color: var(--green); text-decoration: none; border-bottom: 1px solid rgba(0, 255, 65, 0.35); }
+a:hover { border-bottom-color: var(--green); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+
+/* Hero */
+.hero { padding: 72px 0 28px; text-align: center; }
+.kicker {
+  display: inline-block;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--green-mute);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: rgba(0, 0, 0, 0.5);
+}
+h1 {
+  margin: 22px 0 8px;
+  font-size: clamp(48px, 13vw, 112px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--green);
+  text-shadow: 0 0 18px rgba(0, 255, 65, 0.55), 0 0 42px rgba(0, 255, 65, 0.25);
+}
+.tagline { margin: 18px auto 0; max-width: 640px; font-size: clamp(17px, 4.4vw, 22px); color: var(--ink); line-height: 1.45; }
+.sub { margin: 10px auto 0; max-width: 620px; color: var(--green-mute); font-size: 14px; }
+
+/* Terminal card */
+.card {
+  margin: 40px auto 0;
+  max-width: 760px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  text-align: left;
+  backdrop-filter: blur(3px);
+}
+.chrome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.35);
+}
+.dot { width: 11px; height: 11px; border-radius: 50%; background: #1d3524; }
+.chrome .title { margin-left: 8px; font-size: 12px; color: var(--green-mute); }
+.menubar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+  padding: 8px 14px;
+  background: linear-gradient(#262827, #1d1f1e);
+  color: #e8e8e8;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  border-bottom: 1px solid #000;
+}
+.menubar .left { margin-right: auto; font-weight: 700; }
+.pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: #050805;
+  border: 1px solid rgba(0, 255, 65, 0.35);
+  overflow: hidden;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--green);
+  white-space: pre;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.7);
+}
+.pill canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.9; }
+.pill span { position: relative; }
+.pill.tight { color: var(--amber); border-color: rgba(255, 204, 51, 0.4); text-shadow: 0 0 6px rgba(255, 204, 51, 0.6); }
+.pill.danger { color: var(--red); border-color: rgba(255, 77, 77, 0.45); text-shadow: 0 0 6px rgba(255, 77, 77, 0.6); }
+.screen { padding: 22px 22px 24px; font-size: 14px; }
+.prompt { color: var(--green-mute); }
+.prompt b { color: var(--green); font-weight: 500; }
+.readout { margin: 14px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; }
+.big {
+  font-size: clamp(56px, 16vw, 84px);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--green);
+  text-shadow: 0 0 22px rgba(0, 255, 65, 0.5);
+  min-width: 2.4ch;
+}
+.big.tight { color: var(--amber); text-shadow: 0 0 22px rgba(255, 204, 51, 0.4); }
+.big.danger { color: var(--red); text-shadow: 0 0 22px rgba(255, 77, 77, 0.4); }
+.readout .what { color: var(--ink); font-size: 16px; }
+.readout .why { color: var(--green-mute); font-size: 13px; margin-top: 4px; }
+.stats { margin-top: 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.stat { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: rgba(0, 0, 0, 0.35); }
+.stat .k { font-size: 11px; color: var(--green-mute); letter-spacing: 0.08em; text-transform: uppercase; }
+.stat .v { font-size: 18px; color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Sections */
+section { padding: 56px 0 0; }
+h2 {
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin: 0 0 18px;
+  font-weight: 700;
+}
+h2::before { content: "> "; color: var(--green-mute); }
+.install {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+.install code {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--green);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.install code::before { content: "$ "; color: var(--green-mute); }
+.copy {
+  flex: none;
+  border: 0;
+  border-left: 1px solid rgba(0, 255, 65, 0.4);
+  background: rgba(0, 255, 65, 0.08);
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 18px;
+  cursor: pointer;
+  min-width: 84px;
+}
+.copy:hover { background: rgba(0, 255, 65, 0.16); }
+.note { color: var(--green-mute); font-size: 13px; margin: 12px 0 0; }
+.note code, p code, li code { color: var(--ink); background: rgba(0, 255, 65, 0.07); padding: 1px 5px; border-radius: 4px; word-break: break-word; }
+.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.feature { border: 1px solid var(--line); border-radius: 12px; padding: 18px; background: var(--panel); }
+.feature h3 { margin: 0 0 8px; font-size: 15px; color: var(--green); }
+.feature p { margin: 0; font-size: 13.5px; color: #b9d9c1; }
+pre.math {
+  margin: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+pre.math .c { color: var(--green-mute); }
+pre.math .g { color: var(--green); }
+.agents { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+.agents li { border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; font-size: 13px; color: #b9d9c1; background: rgba(0, 0, 0, 0.5); }
+footer { padding: 64px 0 48px; text-align: center; color: var(--green-mute); font-size: 13px; }
+footer .links { display: flex; justify-content: center; flex-wrap: wrap; gap: 18px; margin-bottom: 10px; }
+
+@media (max-width: 760px) {
+  .features { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .menubar .opt { display: none; }
+  .hero { padding-top: 48px; }
+  section { padding-top: 44px; }
+}
+@media (max-width: 420px) {
+  .install { flex-direction: column; }
+  .copy { border-left: 0; border-top: 1px solid rgba(0, 255, 65, 0.4); padding: 10px; }
+  .screen { padding: 18px 16px 20px; }
+  .readout { gap: 14px; }
+  .menubar .left { display: none; }
+  .menubar { justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #rain { opacity: 0.35; }
+}
+</style>
+</head>
+<body>
+<canvas id="rain" aria-hidden="true"></canvas>
+<div class="veil" aria-hidden="true"></div>
+
+<main>
+  <div class="wrap">
+    <header class="hero">
+      <span class="kicker">macOS menu bar app &middot; free &middot; MIT</span>
+      <h1>HEADROOM</h1>
+      <p class="tagline">How many more AI agents can your Mac take?</p>
+      <p class="sub">A Matrix-style menu bar meter for agent fleets. Claude Code, Codex, Gemini CLI, Hermes and friends, across every terminal you have open.</p>
+
+      <div class="card" role="img" aria-label="Demo of the Headroom menu bar item updating with live numbers">
+        <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">menu bar, live</span></div>
+        <div class="menubar">
+          <span class="left">Terminal</span>
+          <span class="pill" id="pill"><canvas id="pillrain" aria-hidden="true"></canvas><span id="pilltext">AG 12  TTY 31  14.2G  +9</span></span>
+          <span class="opt">never give up</span>
+          <span class="opt" id="clock">9:41 AM</span>
+        </div>
+        <div class="screen">
+          <div class="prompt"><b>$</b> headroom</div>
+          <div class="readout">
+            <div class="big" id="big">+9</div>
+            <div>
+              <div class="what" id="what">more agents fit before the 3.0G reserve</div>
+              <div class="why" id="why">at 1.2G per agent (median of your running agents)</div>
+            </div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="k">Agents</div><div class="v" id="s-ag">12</div></div>
+            <div class="stat"><div class="k">Terminals</div><div class="v" id="s-tty">31</div></div>
+            <div class="stat"><div class="k">Available</div><div class="v" id="s-av">14.2G</div></div>
+            <div class="stat"><div class="k">Swap</div><div class="v" id="s-sw">3.1G</div></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section id="install">
+      <h2>Install</h2>
+      <div class="install">
+        <code id="cmd">curl -fsSL https://raw.githubusercontent.com/theluckystrike/headroom/main/install.sh | bash</code>
+        <button class="copy" id="copy" type="button" aria-label="Copy install command">copy</button>
+      </div>
+      <p class="note">Builds from source with the Swift that ships with Xcode Command Line Tools, so there is no unsigned binary and no Gatekeeper prompt. Needs macOS 13 or later and <code>xcode-select --install</code>. Prefer to read first: <code>git clone https://github.com/theluckystrike/headroom &amp;&amp; cd headroom &amp;&amp; make install</code></p>
+    </section>
+
+    <section id="features">
+      <h2>What it does</h2>
+      <div class="features">
+        <div class="feature">
+          <h3>Counts agents, not processes</h3>
+          <p>One Claude Code session is a node process plus MCP servers, language servers and shells. Headroom folds each tree into one agent and measures its real memory footprint.</p>
+        </div>
+        <div class="feature">
+          <h3>Counts every terminal</h3>
+          <p>One session is one tty: a tab, a split, a tmux pane. Terminal, iTerm2, Ghostty, WezTerm, kitty, Alacritty, Warp, VS Code, Cursor and Zed all count the same way.</p>
+        </div>
+        <div class="feature">
+          <h3>Answers one question</h3>
+          <p>Can I start one more? The number on the right is how many more agents fit before the Mac starts swapping hard. It reads tight at 3 or fewer and danger at 0.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="math">
+      <h2>The math</h2>
+<pre class="math"><span class="c"># what macOS can hand out without swapping hard</span>
+available = total &times; kern.memorystatus_level / 100
+
+<span class="c"># what one more agent will cost: median physical footprint
+# of the running agent process trees, MCP servers included</span>
+per_agent = clamp(median(agent trees), 150M, 4G)   <span class="c"># 600M if none run</span>
+
+<span class="g">headroom  = floor((available - reserve) / per_agent)</span>   <span class="c"># reserve 3G</span>
+
+<span class="c"># danger when any of these hold</span>
+danger    = headroom == 0  or  pressure == critical  or  swap &ge; 85% used</pre>
+      <p class="note">On a 36 GB Mac at memorystatus_level 41: available is about 14.8G. With 3G reserved and agents at 1.2G each, 9 more fit.</p>
+    </section>
+
+    <section id="agents">
+      <h2>Knows these agents</h2>
+      <ul class="agents">
+        <li>Claude Code</li><li>Codex</li><li>Gemini CLI</li><li>Hermes</li><li>Aider</li><li>opencode</li><li>Goose</li><li>Cursor Agent</li><li>Amp</li><li>Copilot CLI</li><li>Droid</li><li>Crush</li><li>Qwen Code</li>
+      </ul>
+      <p class="note">No network, no telemetry. Reads only the names, arguments and memory of your own processes. Polls every 2 seconds; the rain pauses on Low Power Mode and when the screen sleeps.</p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="https://github.com/theluckystrike/headroom">github.com/theluckystrike/headroom</a>
+      <a href="https://github.com/theluckystrike/headroom#cli">CLI and statusline</a>
+      <a href="https://github.com/theluckystrike/headroom/blob/main/LICENSE">MIT license</a>
+    </div>
+    <div>Made by <a href="https://github.com/theluckystrike">Michael Lip</a>, who runs too many agents.</div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var GLYPHS = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン0123456789";
+  var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+  function pick() { return GLYPHS.charAt((Math.random() * GLYPHS.length) | 0); }
+
+  // A rain field on one canvas. step() advances one frame.
+  function Rain(canvas, size, fade, bright) {
+    var ctx = canvas.getContext("2d");
+    var drops = [], w = 0, h = 0, dpr = 1;
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.clientWidth; h = canvas.clientHeight;
+      canvas.width = Math.max(1, Math.round(w * dpr));
+      canvas.height = Math.max(1, Math.round(h * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = "#030604"; ctx.fillRect(0, 0, w, h);
+      var cols = Math.ceil(w / size), old = drops;
+      drops = [];
+      for (var i = 0; i < cols; i++) drops.push(old[i] !== undefined ? old[i] : Math.random() * -h / size);
+    }
+    function step() {
+      ctx.fillStyle = fade;
+      ctx.fillRect(0, 0, w, h);
+      ctx.font = size + "px 'JetBrains Mono', monospace";
+      ctx.textBaseline = "top";
+      for (var i = 0; i < drops.length; i++) {
+        var y = drops[i] * size;
+        if (y > -size) {
+          ctx.fillStyle = Math.random() < 0.06 ? bright : "rgba(0,255,65,0.75)";
+          ctx.fillText(pick(), i * size, y);
+        }
+        if (y > h && Math.random() > 0.975) drops[i] = Math.random() * -8;
+        drops[i] += 1;
+      }
+    }
+    function still() {
+      // One static frame for reduced motion: scattered faint glyphs.
+      ctx.fillStyle = "#030604"; ctx.fillRect(0, 0, w, h);
+      ctx.font = size + "px 'JetBrains Mono', monospace";
+      ctx.textBaseline = "top";
+      for (var i = 0; i < drops.length; i++) {
+        var len = 4 + ((Math.random() * 10) | 0), head = Math.random() * h;
+        for (var j = 0; j < len; j++) {
+          ctx.fillStyle = "rgba(0,255,65," + (0.5 * (1 - j / len)).toFixed(2) + ")";
+          ctx.fillText(pick(), i * size, head - j * size);
+        }
+      }
+    }
+    return { resize: resize, step: step, still: still };
+  }
+
+  var bg = Rain(document.getElementById("rain"), 18, "rgba(3,6,4,0.09)", "#c8ffd6");
+  var pc = document.getElementById("pillrain");
+  var pr = Rain(pc, 8, "rgba(5,8,5,0.22)", "rgba(0,255,65,0.5)");
+  pc.getContext("2d").globalAlpha = 0.35;
+
+  var running = false, last = 0, raf = 0;
+  function frame(t) {
+    raf = requestAnimationFrame(frame);
+    if (t - last < 66) return; // about 15 fps is plenty for rain
+    last = t;
+    bg.step();
+    pr.step();
+  }
+  function start() {
+    if (running) return;
+    running = true; raf = requestAnimationFrame(frame);
+  }
+  function stop() { running = false; cancelAnimationFrame(raf); }
+  function apply() {
+    bg.resize(); pr.resize();
+    if (reduced && reduced.matches) { stop(); bg.still(); pr.still(); }
+    else if (!document.hidden) start();
+  }
+  var rt = 0;
+  window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(apply, 120); });
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) stop(); else if (!(reduced && reduced.matches)) start();
+  });
+  if (reduced && reduced.addEventListener) reduced.addEventListener("change", function () { stop(); apply(); });
+  apply();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (reduced && reduced.matches) apply(); });
+
+  // Fake live numbers, using the same math the app uses.
+  var G = 1024 * 1024 * 1024, TOTAL = 36 * G, RESERVE = 3 * G;
+  var state = { ag: 12, tty: 31, level: 41, per: 1.2 * G, swap: 3.1 };
+  function fmt(b) { return b >= G ? (b / G).toFixed(1) + "G" : Math.round(b / (1024 * 1024)) + "M"; }
+  function render() {
+    var avail = TOTAL * state.level / 100;
+    var head = Math.max(0, Math.floor((avail - RESERVE) / state.per));
+    var lvl = head === 0 || state.swap / 8 >= 0.85 ? "danger" : head <= 3 ? "tight" : "ok";
+    document.getElementById("pilltext").textContent =
+      "AG " + state.ag + "  TTY " + state.tty + "  " + fmt(avail) + "  +" + head;
+    var pill = document.getElementById("pill"), big = document.getElementById("big");
+    pill.className = "pill" + (lvl === "ok" ? "" : " " + lvl);
+    big.className = "big" + (lvl === "ok" ? "" : " " + lvl);
+    big.textContent = "+" + head;
+    document.getElementById("what").textContent =
+      (head === 1 ? "more agent fits" : "more agents fit") + " before the 3.0G reserve";
+    document.getElementById("why").textContent = "at " + fmt(state.per) + " per agent (median of your running agents)";
+    document.getElementById("s-ag").textContent = state.ag;
+    document.getElementById("s-tty").textContent = state.tty;
+    document.getElementById("s-av").textContent = fmt(avail);
+    document.getElementById("s-sw").textContent = state.swap.toFixed(1) + "G";
+  }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function tick() {
+    // A slow random walk: agents come and go, memory follows them.
+    var r = Math.random();
+    if (r < 0.18 && state.ag < 22) { state.ag++; state.tty += Math.random() < 0.6 ? 1 : 0; state.level -= 3; }
+    else if (r < 0.34 && state.ag > 6) { state.ag--; state.level += 3; }
+    state.level = clamp(state.level + Math.round((Math.random() - 0.5) * 2), 14, 60);
+    state.tty = clamp(state.tty + (Math.random() < 0.1 ? (Math.random() < 0.5 ? -1 : 1) : 0), state.ag + 8, 140);
+    state.per = clamp(state.per + (Math.random() - 0.5) * 0.04 * G, 0.9 * G, 1.5 * G);
+    state.swap = clamp(state.swap + (Math.random() - 0.5) * 0.2, 1.2, 6.4);
+    render();
+  }
+  function clock() {
+    var d = new Date(), h = d.getHours(), m = d.getMinutes();
+    document.getElementById("clock").textContent =
+      ((h % 12) || 12) + ":" + (m < 10 ? "0" : "") + m + (h < 12 ? " AM" : " PM");
+  }
+  render(); clock();
+  setInterval(function () { if (!document.hidden) tick(); }, 2000);
+  setInterval(clock, 15000);
+
+  // Copy button.
+  var btn = document.getElementById("copy"), cmd = document.getElementById("cmd").textContent;
+  function done(ok) {
+    btn.textContent = ok ? "copied" : "select";
+    setTimeout(function () { btn.textContent = "copy"; }, 1600);
+  }
+  btn.addEventListener("click", function () {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(cmd).then(function () { done(true); }, function () { fallback(); });
+    } else fallback();
+  });
+  function fallback() {
+    var ta = document.createElement("textarea");
+    ta.value = cmd; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    done(ok);
+  }
+})();
+</script>
+</body>
+</html>

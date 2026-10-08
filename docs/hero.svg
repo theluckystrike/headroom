@@ -1,0 +1,362 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="690" viewBox="0 0 1280 690" role="img" aria-label="Headroom in the macOS menu bar: AG 12, TTY 31, 14.2G free, +9 more agents fit">
+<defs>
+<linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#07130b"/><stop offset="1" stop-color="#020403"/></linearGradient>
+<linearGradient id="bar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2c2b"/><stop offset="1" stop-color="#1f2120"/></linearGradient>
+<filter id="glow" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity="0.7"/></filter>
+<clipPath id="frame"><rect x="0" y="0" width="1280" height="690" rx="18"/></clipPath>
+<clipPath id="pillclip"><rect x="566" y="9" width="262" height="30" rx="7"/></clipPath>
+</defs>
+<g clip-path="url(#frame)">
+<rect width="1280" height="690" fill="url(#wall)"/>
+<g font-family="SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace" font-size="15" fill="#00FF41">
+<text x="10" y="230" opacity="0.32">ノ</text>
+<text x="10" y="211" opacity="0.19">ユ</text>
+<text x="10" y="192" opacity="0.16">ン</text>
+<text x="10" y="173" opacity="0.13">テ</text>
+<text x="10" y="154" opacity="0.11">ヤ</text>
+<text x="10" y="135" opacity="0.08">ツ</text>
+<text x="10" y="116" opacity="0.05">ノ</text>
+<text x="34" y="69" opacity="0.32">4</text>
+<text x="82" y="509" opacity="0.32">コ</text>
+<text x="82" y="490" opacity="0.17">コ</text>
+<text x="82" y="471" opacity="0.12">1</text>
+<text x="82" y="452" opacity="0.07">ナ</text>
+<text x="130" y="657" opacity="0.32">エ</text>
+<text x="130" y="638" opacity="0.20">ク</text>
+<text x="130" y="619" opacity="0.19">5</text>
+<text x="130" y="600" opacity="0.17">ヨ</text>
+<text x="130" y="581" opacity="0.16">ウ</text>
+<text x="130" y="562" opacity="0.14">フ</text>
+<text x="130" y="543" opacity="0.13">テ</text>
+<text x="130" y="524" opacity="0.11">8</text>
+<text x="130" y="505" opacity="0.10">2</text>
+<text x="130" y="486" opacity="0.08">セ</text>
+<text x="130" y="467" opacity="0.07">オ</text>
+<text x="130" y="448" opacity="0.05">1</text>
+<text x="130" y="429" opacity="0.04">ネ</text>
+<text x="154" y="628" opacity="0.32">ロ</text>
+<text x="154" y="609" opacity="0.19">イ</text>
+<text x="154" y="590" opacity="0.15">ク</text>
+<text x="154" y="571" opacity="0.12">キ</text>
+<text x="154" y="552" opacity="0.09">コ</text>
+<text x="154" y="533" opacity="0.05">ン</text>
+<text x="178" y="114" opacity="0.32">ツ</text>
+<text x="178" y="95" opacity="0.19">ナ</text>
+<text x="178" y="76" opacity="0.15">ソ</text>
+<text x="178" y="57" opacity="0.12">リ</text>
+<text x="226" y="118" opacity="0.32">ト</text>
+<text x="226" y="99" opacity="0.20">ハ</text>
+<text x="226" y="80" opacity="0.18">コ</text>
+<text x="226" y="61" opacity="0.16">キ</text>
+<text x="250" y="82" opacity="0.32">ロ</text>
+<text x="250" y="63" opacity="0.20">ロ</text>
+<text x="274" y="295" opacity="0.32">イ</text>
+<text x="274" y="276" opacity="0.20">カ</text>
+<text x="274" y="257" opacity="0.18">ケ</text>
+<text x="274" y="238" opacity="0.16">オ</text>
+<text x="274" y="219" opacity="0.14">ホ</text>
+<text x="274" y="200" opacity="0.12">1</text>
+<text x="274" y="181" opacity="0.10">ハ</text>
+<text x="274" y="162" opacity="0.08">フ</text>
+<text x="274" y="143" opacity="0.06">モ</text>
+<text x="274" y="124" opacity="0.04">2</text>
+<text x="370" y="202" opacity="0.32">6</text>
+<text x="370" y="183" opacity="0.19">オ</text>
+<text x="370" y="164" opacity="0.15">0</text>
+<text x="370" y="145" opacity="0.12">ウ</text>
+<text x="370" y="126" opacity="0.09">1</text>
+<text x="370" y="107" opacity="0.05">ワ</text>
+<text x="394" y="679" opacity="0.10">0</text>
+<text x="394" y="660" opacity="0.06">ケ</text>
+<text x="418" y="674" opacity="0.16">0</text>
+<text x="418" y="655" opacity="0.14">2</text>
+<text x="418" y="636" opacity="0.12">カ</text>
+<text x="418" y="617" opacity="0.10">ラ</text>
+<text x="418" y="598" opacity="0.08">メ</text>
+<text x="418" y="579" opacity="0.06">ヒ</text>
+<text x="418" y="560" opacity="0.04">ラ</text>
+<text x="442" y="285" opacity="0.32">フ</text>
+<text x="442" y="266" opacity="0.19">ネ</text>
+<text x="442" y="247" opacity="0.16">1</text>
+<text x="442" y="228" opacity="0.13">ホ</text>
+<text x="442" y="209" opacity="0.11">ワ</text>
+<text x="442" y="190" opacity="0.08">1</text>
+<text x="442" y="171" opacity="0.05">ヒ</text>
+<text x="466" y="687" opacity="0.10">ツ</text>
+<text x="466" y="668" opacity="0.06">モ</text>
+<text x="514" y="446" opacity="0.32">0</text>
+<text x="514" y="427" opacity="0.20">ナ</text>
+<text x="514" y="408" opacity="0.17">6</text>
+<text x="514" y="389" opacity="0.14">リ</text>
+<text x="514" y="370" opacity="0.12">ノ</text>
+<text x="514" y="351" opacity="0.10">5</text>
+<text x="514" y="332" opacity="0.07">テ</text>
+<text x="514" y="313" opacity="0.04">3</text>
+<text x="538" y="279" opacity="0.32">ヤ</text>
+<text x="538" y="260" opacity="0.18">サ</text>
+<text x="538" y="241" opacity="0.14">セ</text>
+<text x="538" y="222" opacity="0.10">イ</text>
+<text x="538" y="203" opacity="0.06">ソ</text>
+<text x="586" y="302" opacity="0.32">ヤ</text>
+<text x="586" y="283" opacity="0.18">ユ</text>
+<text x="586" y="264" opacity="0.14">リ</text>
+<text x="586" y="245" opacity="0.10">コ</text>
+<text x="586" y="226" opacity="0.06">ミ</text>
+<text x="658" y="517" opacity="0.32">ラ</text>
+<text x="658" y="498" opacity="0.18">2</text>
+<text x="658" y="479" opacity="0.14">0</text>
+<text x="658" y="460" opacity="0.10">ス</text>
+<text x="658" y="441" opacity="0.06">ヤ</text>
+<text x="682" y="425" opacity="0.32">ツ</text>
+<text x="682" y="406" opacity="0.20">7</text>
+<text x="682" y="387" opacity="0.18">ヌ</text>
+<text x="682" y="368" opacity="0.16">イ</text>
+<text x="682" y="349" opacity="0.14">シ</text>
+<text x="682" y="330" opacity="0.12">ヨ</text>
+<text x="682" y="311" opacity="0.10">0</text>
+<text x="682" y="292" opacity="0.08">コ</text>
+<text x="682" y="273" opacity="0.06">ル</text>
+<text x="682" y="254" opacity="0.04">コ</text>
+<text x="706" y="241" opacity="0.32">ヒ</text>
+<text x="706" y="222" opacity="0.21">1</text>
+<text x="706" y="203" opacity="0.19">5</text>
+<text x="706" y="184" opacity="0.18">オ</text>
+<text x="706" y="165" opacity="0.16">ウ</text>
+<text x="706" y="146" opacity="0.15">ム</text>
+<text x="706" y="127" opacity="0.13">ロ</text>
+<text x="706" y="108" opacity="0.12">ラ</text>
+<text x="706" y="89" opacity="0.11">ン</text>
+<text x="706" y="70" opacity="0.09">ヌ</text>
+<text x="754" y="350" opacity="0.32">コ</text>
+<text x="754" y="331" opacity="0.20">チ</text>
+<text x="754" y="312" opacity="0.17">9</text>
+<text x="754" y="293" opacity="0.14">ノ</text>
+<text x="754" y="274" opacity="0.12">リ</text>
+<text x="754" y="255" opacity="0.10">ソ</text>
+<text x="754" y="236" opacity="0.07">8</text>
+<text x="754" y="217" opacity="0.04">ク</text>
+<text x="778" y="677" opacity="0.20">ヨ</text>
+<text x="778" y="658" opacity="0.17">ヒ</text>
+<text x="778" y="639" opacity="0.14">ト</text>
+<text x="778" y="620" opacity="0.12">ハ</text>
+<text x="778" y="601" opacity="0.10">6</text>
+<text x="778" y="582" opacity="0.07">ミ</text>
+<text x="778" y="563" opacity="0.04">ン</text>
+<text x="802" y="572" opacity="0.32">マ</text>
+<text x="802" y="553" opacity="0.18">ラ</text>
+<text x="802" y="534" opacity="0.14">ヘ</text>
+<text x="802" y="515" opacity="0.10">ソ</text>
+<text x="802" y="496" opacity="0.06">マ</text>
+<text x="850" y="312" opacity="0.32">ミ</text>
+<text x="850" y="293" opacity="0.18">マ</text>
+<text x="850" y="274" opacity="0.14">ユ</text>
+<text x="850" y="255" opacity="0.10">7</text>
+<text x="850" y="236" opacity="0.06">ノ</text>
+<text x="898" y="87" opacity="0.32">3</text>
+<text x="898" y="68" opacity="0.20">3</text>
+<text x="922" y="570" opacity="0.32">ナ</text>
+<text x="922" y="551" opacity="0.20">ネ</text>
+<text x="922" y="532" opacity="0.18">ヨ</text>
+<text x="922" y="513" opacity="0.16">シ</text>
+<text x="922" y="494" opacity="0.14">フ</text>
+<text x="922" y="475" opacity="0.12">イ</text>
+<text x="922" y="456" opacity="0.10">ソ</text>
+<text x="922" y="437" opacity="0.08">サ</text>
+<text x="922" y="418" opacity="0.06">リ</text>
+<text x="922" y="399" opacity="0.04">ム</text>
+<text x="946" y="673" opacity="0.07">ヨ</text>
+<text x="970" y="299" opacity="0.32">7</text>
+<text x="970" y="280" opacity="0.17">9</text>
+<text x="970" y="261" opacity="0.12">ツ</text>
+<text x="970" y="242" opacity="0.07">リ</text>
+<text x="1018" y="455" opacity="0.32">1</text>
+<text x="1018" y="436" opacity="0.19">シ</text>
+<text x="1018" y="417" opacity="0.16">ウ</text>
+<text x="1018" y="398" opacity="0.13">メ</text>
+<text x="1018" y="379" opacity="0.11">ナ</text>
+<text x="1018" y="360" opacity="0.08">ヨ</text>
+<text x="1018" y="341" opacity="0.05">ム</text>
+<text x="1042" y="125" opacity="0.32">ユ</text>
+<text x="1042" y="106" opacity="0.20">モ</text>
+<text x="1042" y="87" opacity="0.18">1</text>
+<text x="1042" y="68" opacity="0.17">ウ</text>
+<text x="1114" y="509" opacity="0.32">イ</text>
+<text x="1114" y="490" opacity="0.21">0</text>
+<text x="1114" y="471" opacity="0.19">ト</text>
+<text x="1114" y="452" opacity="0.18">キ</text>
+<text x="1114" y="433" opacity="0.16">ト</text>
+<text x="1114" y="414" opacity="0.15">ノ</text>
+<text x="1114" y="395" opacity="0.13">6</text>
+<text x="1114" y="376" opacity="0.12">オ</text>
+<text x="1114" y="357" opacity="0.11">モ</text>
+<text x="1114" y="338" opacity="0.09">8</text>
+<text x="1114" y="319" opacity="0.08">ナ</text>
+<text x="1114" y="300" opacity="0.06">ロ</text>
+<text x="1114" y="281" opacity="0.05">ヘ</text>
+<text x="1114" y="262" opacity="0.03">3</text>
+<text x="1138" y="243" opacity="0.32">カ</text>
+<text x="1138" y="224" opacity="0.20">オ</text>
+<text x="1138" y="205" opacity="0.19">ネ</text>
+<text x="1138" y="186" opacity="0.17">ノ</text>
+<text x="1138" y="167" opacity="0.15">ヌ</text>
+<text x="1138" y="148" opacity="0.14">サ</text>
+<text x="1138" y="129" opacity="0.12">ホ</text>
+<text x="1138" y="110" opacity="0.10">シ</text>
+<text x="1138" y="91" opacity="0.09">チ</text>
+<text x="1138" y="72" opacity="0.07">サ</text>
+<text x="1162" y="74" opacity="0.32">ナ</text>
+<text x="1210" y="76" opacity="0.32">ス</text>
+<text x="1210" y="57" opacity="0.20">エ</text>
+<text x="1234" y="76" opacity="0.32">コ</text>
+<text x="1234" y="57" opacity="0.18">1</text>
+</g>
+<rect x="0" y="0" width="1280" height="48" fill="url(#bar)"/>
+<rect x="0" y="47" width="1280" height="1" fill="#000" opacity="0.6"/>
+<g font-family="-apple-system, BlinkMacSystemFont, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16" fill="#e8e8e8">
+<text x="26" y="30" font-weight="700">Terminal</text>
+<text x="118" y="30">Shell</text>
+<text x="176" y="30">Edit</text>
+<text x="227" y="30">View</text>
+<text x="283" y="30">Window</text>
+<text x="360" y="30">Help</text>
+</g>
+<rect x="566" y="9" width="262" height="30" rx="7" fill="#050805" stroke="#00FF41" stroke-opacity="0.35"/>
+<g clip-path="url(#pillclip)" font-family="SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace" font-size="10" fill="#00FF41">
+<text x="569" y="30" opacity="0.26">サ</text>
+<text x="569" y="20" opacity="0.19">3</text>
+<text x="569" y="10" opacity="0.12">マ</text>
+<text x="578" y="46" opacity="0.26">マ</text>
+<text x="578" y="36" opacity="0.19">ロ</text>
+<text x="578" y="26" opacity="0.12">チ</text>
+<text x="587" y="52" opacity="0.26">ン</text>
+<text x="587" y="42" opacity="0.19">ツ</text>
+<text x="587" y="32" opacity="0.12">ユ</text>
+<text x="587" y="22" opacity="0.05">ン</text>
+<text x="596" y="23" opacity="0.26">6</text>
+<text x="596" y="13" opacity="0.19">7</text>
+<text x="605" y="14" opacity="0.26">メ</text>
+<text x="605" y="4" opacity="0.19">エ</text>
+<text x="605" y="-6" opacity="0.12">ス</text>
+<text x="614" y="33" opacity="0.26">テ</text>
+<text x="614" y="23" opacity="0.19">チ</text>
+<text x="614" y="13" opacity="0.12">9</text>
+<text x="623" y="31" opacity="0.26">テ</text>
+<text x="623" y="21" opacity="0.19">カ</text>
+<text x="623" y="11" opacity="0.12">オ</text>
+<text x="632" y="29" opacity="0.26">ト</text>
+<text x="632" y="19" opacity="0.19">コ</text>
+<text x="632" y="9" opacity="0.12">ハ</text>
+<text x="632" y="-1" opacity="0.05">モ</text>
+<text x="641" y="48" opacity="0.26">ア</text>
+<text x="641" y="38" opacity="0.19">ネ</text>
+<text x="641" y="28" opacity="0.12">レ</text>
+<text x="641" y="18" opacity="0.05">ソ</text>
+<text x="650" y="36" opacity="0.26">ラ</text>
+<text x="650" y="26" opacity="0.19">ロ</text>
+<text x="650" y="16" opacity="0.12">ヘ</text>
+<text x="659" y="39" opacity="0.26">ソ</text>
+<text x="659" y="29" opacity="0.19">ウ</text>
+<text x="659" y="19" opacity="0.12">7</text>
+<text x="659" y="9" opacity="0.05">ス</text>
+<text x="668" y="16" opacity="0.26">リ</text>
+<text x="668" y="6" opacity="0.19">ネ</text>
+<text x="668" y="-4" opacity="0.12">イ</text>
+<text x="677" y="24" opacity="0.26">ヒ</text>
+<text x="677" y="14" opacity="0.19">ン</text>
+<text x="677" y="4" opacity="0.12">カ</text>
+<text x="686" y="45" opacity="0.26">ヤ</text>
+<text x="686" y="35" opacity="0.19">マ</text>
+<text x="686" y="25" opacity="0.12">9</text>
+<text x="686" y="15" opacity="0.05">6</text>
+<text x="695" y="52" opacity="0.26">9</text>
+<text x="695" y="42" opacity="0.19">1</text>
+<text x="704" y="20" opacity="0.26">ハ</text>
+<text x="704" y="10" opacity="0.19">ホ</text>
+<text x="704" y="0" opacity="0.12">ロ</text>
+<text x="704" y="-10" opacity="0.05">カ</text>
+<text x="713" y="48" opacity="0.26">6</text>
+<text x="713" y="38" opacity="0.19">ン</text>
+<text x="713" y="28" opacity="0.12">カ</text>
+<text x="713" y="18" opacity="0.05">7</text>
+<text x="722" y="14" opacity="0.26">ワ</text>
+<text x="722" y="4" opacity="0.19">ユ</text>
+<text x="731" y="30" opacity="0.26">フ</text>
+<text x="731" y="20" opacity="0.19">ノ</text>
+<text x="731" y="10" opacity="0.12">ツ</text>
+<text x="740" y="15" opacity="0.26">リ</text>
+<text x="740" y="5" opacity="0.19">5</text>
+<text x="749" y="52" opacity="0.26">カ</text>
+<text x="749" y="42" opacity="0.19">7</text>
+<text x="749" y="32" opacity="0.12">5</text>
+<text x="749" y="22" opacity="0.05">モ</text>
+<text x="758" y="38" opacity="0.26">ヌ</text>
+<text x="758" y="28" opacity="0.19">マ</text>
+<text x="758" y="18" opacity="0.12">ス</text>
+<text x="767" y="36" opacity="0.26">ヨ</text>
+<text x="767" y="26" opacity="0.19">カ</text>
+<text x="767" y="16" opacity="0.12">8</text>
+<text x="767" y="6" opacity="0.05">メ</text>
+<text x="776" y="45" opacity="0.26">ワ</text>
+<text x="776" y="35" opacity="0.19">ン</text>
+<text x="785" y="31" opacity="0.26">シ</text>
+<text x="785" y="21" opacity="0.19">ル</text>
+<text x="794" y="30" opacity="0.26">ミ</text>
+<text x="794" y="20" opacity="0.19">ミ</text>
+<text x="794" y="10" opacity="0.12">2</text>
+<text x="803" y="18" opacity="0.26">メ</text>
+<text x="803" y="8" opacity="0.19">ソ</text>
+<text x="812" y="23" opacity="0.26">8</text>
+<text x="812" y="13" opacity="0.19">ロ</text>
+<text x="821" y="18" opacity="0.26">6</text>
+<text x="821" y="8" opacity="0.19">ツ</text>
+</g>
+<text x="580" y="29" font-family="SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace" font-size="15.5" font-weight="700" fill="#00FF41" filter="url(#glow)" xml:space="preserve" textLength="234" lengthAdjust="spacing">AG 12  TTY 31  14.2G  +9</text>
+<text x="986" y="30" font-family="-apple-system, BlinkMacSystemFont, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16" fill="#e8e8e8" text-anchor="end">never give up</text>
+<g transform="translate(1012 33)" fill="none" stroke="#e8e8e8" stroke-width="2.4" stroke-linecap="round"><path d="M-11,-11 A15.5,15.5 0 0 1 11,-11"/><path d="M-6.4,-6.4 A9,9 0 0 1 6.4,-6.4"/><circle cx="0" cy="-1.5" r="1.6" fill="#e8e8e8" stroke="none"/></g>
+<g transform="translate(1044 15)"><rect x="0" y="0" width="30" height="15" rx="4" fill="none" stroke="#e8e8e8" stroke-opacity="0.7" stroke-width="1.4"/><rect x="2.5" y="2.5" width="20" height="10" rx="2" fill="#e8e8e8"/><rect x="31.5" y="5" width="2.5" height="5" rx="1" fill="#e8e8e8" fill-opacity="0.7"/></g>
+<text x="1254" y="30" font-family="-apple-system, BlinkMacSystemFont, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16" fill="#e8e8e8" text-anchor="end">Thu Oct 8  9:41 AM</text>
+<g filter="url(#shadow)">
+<rect x="566" y="56" width="420" height="600" rx="12" fill="#0a0f0b" fill-opacity="0.97" stroke="#00FF41" stroke-opacity="0.22"/>
+</g>
+<g font-family="SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace">
+<text x="588" y="90" font-size="13" fill="#7fae8b" letter-spacing="2">HEADROOM</text>
+<text x="964" y="90" font-size="13" fill="#7fae8b" text-anchor="end">updated 1s ago</text>
+<text x="588" y="148" font-size="52" font-weight="700" fill="#00FF41" filter="url(#glow)">+9</text>
+<text x="678" y="126" font-size="16" fill="#d8f5df">more agents fit</text>
+<text x="678" y="148" font-size="13" fill="#7fae8b">before the 3.0G reserve</text>
+<rect x="588" y="170" width="376" height="1" fill="#00FF41" opacity="0.18"/>
+<text x="588" y="198" font-size="15" fill="#c9e8d0">Agents running</text>
+<text x="964" y="198" font-size="15" fill="#00FF41" text-anchor="end" xml:space="preserve">12</text>
+<text x="606" y="224" font-size="14" fill="#7fae8b">Claude Code</text>
+<text x="964" y="224" font-size="14" fill="#a9d8b4" text-anchor="end" xml:space="preserve">5    6.8G</text>
+<text x="606" y="248" font-size="14" fill="#7fae8b">Codex</text>
+<text x="964" y="248" font-size="14" fill="#a9d8b4" text-anchor="end" xml:space="preserve">4    2.9G</text>
+<text x="606" y="272" font-size="14" fill="#7fae8b">Hermes</text>
+<text x="964" y="272" font-size="14" fill="#a9d8b4" text-anchor="end" xml:space="preserve">3    1.6G</text>
+<text x="588" y="300" font-size="15" fill="#c9e8d0">Per agent (median)</text>
+<text x="964" y="300" font-size="15" fill="#e6ffe9" text-anchor="end" xml:space="preserve">1.2G</text>
+<rect x="588" y="328" width="376" height="1" fill="#00FF41" opacity="0.18"/>
+<text x="588" y="356" font-size="15" fill="#c9e8d0">Terminal sessions</text>
+<text x="964" y="356" font-size="15" fill="#00FF41" text-anchor="end" xml:space="preserve">31</text>
+<text x="606" y="382" font-size="14" fill="#7fae8b">iTerm2</text>
+<text x="964" y="382" font-size="14" fill="#a9d8b4" text-anchor="end" xml:space="preserve">18</text>
+<text x="606" y="406" font-size="14" fill="#7fae8b">Ghostty</text>
+<text x="964" y="406" font-size="14" fill="#a9d8b4" text-anchor="end" xml:space="preserve">9</text>
+<text x="606" y="430" font-size="14" fill="#7fae8b">tmux</text>
+<text x="964" y="430" font-size="14" fill="#a9d8b4" text-anchor="end" xml:space="preserve">4</text>
+<rect x="588" y="456" width="376" height="1" fill="#00FF41" opacity="0.18"/>
+<text x="588" y="484" font-size="15" fill="#c9e8d0">Available</text>
+<text x="964" y="484" font-size="15" fill="#00FF41" text-anchor="end" xml:space="preserve">14.2G of 36G</text>
+<text x="588" y="510" font-size="15" fill="#c9e8d0">Swap used</text>
+<text x="964" y="510" font-size="15" fill="#e6ffe9" text-anchor="end" xml:space="preserve">3.1G of 8.0G</text>
+<text x="588" y="536" font-size="15" fill="#c9e8d0">Pressure</text>
+<text x="964" y="536" font-size="15" fill="#e6ffe9" text-anchor="end" xml:space="preserve">normal</text>
+<rect x="588" y="564" width="376" height="1" fill="#00FF41" opacity="0.18"/>
+<text x="588" y="592" font-size="15" fill="#c9e8d0">Settings...</text>
+<text x="964" y="592" font-size="15" fill="#e6ffe9" text-anchor="end" xml:space="preserve"></text>
+<text x="588" y="618" font-size="15" fill="#c9e8d0">Quit Headroom</text>
+<text x="964" y="618" font-size="15" fill="#e6ffe9" text-anchor="end" xml:space="preserve"></text>
+</g>
+</g>
+</svg>
