@@ -3,15 +3,20 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/theluckystrike/headroom/main/install.sh | bash
 #
-# Builds Headroom from source on this Mac (so Gatekeeper never quarantines it),
-# installs Headroom.app into ~/Applications and the `headroom` CLI into
-# ~/.local/bin (or /usr/local/bin), then launches the app.
+# On Apple silicon it downloads the latest release zip with curl, checks its
+# SHA-256 and installs it. Files fetched by curl are not quarantined, so no
+# Gatekeeper prompt appears. On Intel, or when the download fails, it builds
+# from source with the Xcode Command Line Tools instead. Either way it installs
+# Headroom.app into ~/Applications and the `headroom` CLI into ~/.local/bin
+# (or /usr/local/bin), then launches the app.
 #
 # Environment:
+#   HEADROOM_BUILD=1  always build from source, skip the release download
 #   HEADROOM_PREFIX   install the CLI into $HEADROOM_PREFIX/bin
 #   HEADROOM_HOME     where the source checkout lives (default ~/.headroom)
-#   HEADROOM_REF      branch or tag to build (default main)
+#   HEADROOM_REF      branch or tag to build (default main; setting it builds from source)
 #   HEADROOM_REPO     git URL (default https://github.com/theluckystrike/headroom)
+#   APPDIR            where Headroom.app goes (default ~/Applications)
 #   NO_OPEN=1         do not launch the app after installing
 #
 # Everything lives in functions and `main` runs on the last line, so a
@@ -20,7 +25,10 @@
 set -euo pipefail
 
 HEADROOM_REPO="${HEADROOM_REPO:-https://github.com/theluckystrike/headroom}"
+REF_GIVEN="${HEADROOM_REF:-}"
 HEADROOM_REF="${HEADROOM_REF:-main}"
+APPDIR="${APPDIR:-$HOME/Applications}"
+INSTALLED_FROM="source"
 HEADROOM_HOME="${HEADROOM_HOME:-$HOME/.headroom}"
 SRC_DIR="$HEADROOM_HOME/src"
 MIN_MACOS=13
@@ -104,6 +112,74 @@ fetch_source() {
     note "commit $(git -C "$SRC_DIR" rev-parse --short HEAD)"
 }
 
+cli_bindir() {
+    # Same rule as the Makefile: $HEADROOM_PREFIX/bin, else ~/.local/bin if it
+    # exists, else /usr/local/bin if writable, else ~/.local/bin.
+    if [ -n "${HEADROOM_PREFIX:-}" ]; then printf '%s\n' "$HEADROOM_PREFIX/bin"
+    elif [ -d "$HOME/.local/bin" ]; then printf '%s\n' "$HOME/.local/bin"
+    elif [ -d /usr/local/bin ] && [ -w /usr/local/bin ]; then printf '%s\n' /usr/local/bin
+    else printf '%s\n' "$HOME/.local/bin"; fi
+}
+
+# Download the latest release and install it. Returns non-zero (and leaves
+# nothing installed) whenever it cannot, so main falls back to a source build.
+install_prebuilt() {
+    if [ -n "${HEADROOM_BUILD:-}" ] || [ -n "$REF_GIVEN" ]; then
+        return 1
+    fi
+    if [ "$(sysctl -n hw.optional.arm64 2>/dev/null || echo 0)" != 1 ]; then
+        note "no prebuilt app for Intel Macs, building from source"
+        return 1
+    fi
+
+    local web tag version zip tmp app
+    web="${HEADROOM_REPO%.git}"
+    tag="$(curl -fsSLI -o /dev/null -w '%{url_effective}' "$web/releases/latest" 2>/dev/null || true)"
+    tag="${tag##*/tag/}"
+    case "$tag" in
+        v[0-9]*) ;;
+        *) note "could not find a release, building from source"; return 1 ;;
+    esac
+    version="${tag#v}"
+    zip="Headroom-$version-macos.zip"
+
+    tmp="$(mktemp -d "${TMPDIR:-/tmp}/headroom.XXXXXX")"
+    say "Downloading Headroom $version"
+    if ! curl -fsSL -o "$tmp/$zip" "$web/releases/download/$tag/$zip" \
+        || ! curl -fsSL -o "$tmp/$zip.sha256" "$web/releases/download/$tag/$zip.sha256"; then
+        rm -rf "$tmp"; note "download failed, building from source"; return 1
+    fi
+    if ! (cd "$tmp" && shasum -a 256 -c "$zip.sha256" >/dev/null 2>&1); then
+        rm -rf "$tmp"; die "SHA-256 of $zip does not match $zip.sha256. Nothing was installed."
+    fi
+    note "sha256 ok"
+    mkdir "$tmp/x"
+    ditto -x -k "$tmp/$zip" "$tmp/x"
+    app="$tmp/x/Headroom.app"
+    if [ ! -x "$app/Contents/MacOS/Headroom" ] || [ ! -x "$app/Contents/Helpers/headroom" ]; then
+        rm -rf "$tmp"; note "release zip looks incomplete, building from source"; return 1
+    fi
+    if ! "$app/Contents/Helpers/headroom" --line >/dev/null 2>&1 </dev/null; then
+        rm -rf "$tmp"; note "release binary does not run on this Mac, building from source"; return 1
+    fi
+
+    stop_running_app
+    local bindir
+    bindir="$(cli_bindir)"
+    mkdir -p "$APPDIR" "$bindir"
+    rm -rf "$APPDIR/Headroom.app"
+    ditto "$app" "$APPDIR/Headroom.app"
+    xattr -dr com.apple.quarantine "$APPDIR/Headroom.app" 2>/dev/null || true
+    # Remove before copying: overwriting a signed binary in place can get it killed on launch.
+    rm -f "$bindir/headroom"
+    cp "$app/Contents/Helpers/headroom" "$bindir/headroom"
+    chmod 755 "$bindir/headroom"
+    rm -rf "$tmp"
+    INSTALLED_FROM="release $tag"
+    note "installed $APPDIR/Headroom.app"
+    note "installed $bindir/headroom"
+}
+
 stop_running_app() {
     if pgrep -x Headroom >/dev/null 2>&1; then
         say "Quitting the running Headroom"
@@ -123,7 +199,7 @@ launch() {
     if [ -n "${NO_OPEN:-}" ]; then
         return 0
     fi
-    local app="$HOME/Applications/Headroom.app"
+    local app="$APPDIR/Headroom.app"
     if [ -d "$app" ]; then
         open "$app" || note "Could not launch $app; open it from Finder."
     fi
@@ -135,8 +211,8 @@ next_steps() {
     elif [ -x "$HOME/.local/bin/headroom" ]; then bindir="$HOME/.local/bin"
     else bindir="/usr/local/bin"; fi
 
-    printf '\n%sHeadroom is installed.%s\n\n' "$BRIGHT" "$RESET"
-    printf '%s  App:%s  ~/Applications/Headroom.app (lives in the menu bar, no Dock icon)\n' "$GREEN" "$RESET"
+    printf '\n%sHeadroom is installed%s (from %s).\n\n' "$BRIGHT" "$RESET" "$INSTALLED_FROM"
+    printf '%s  App:%s  %s/Headroom.app (lives in the menu bar, no Dock icon)\n' "$GREEN" "$RESET" "$APPDIR"
     printf '%s  CLI:%s  %s/headroom\n\n' "$GREEN" "$RESET" "$bindir"
     printf '%sNext steps%s\n' "$GREEN" "$RESET"
     printf '  - Hold Cmd and drag the Headroom item to move it along the menu bar.\n'
@@ -153,17 +229,20 @@ next_steps() {
             printf "  echo 'export PATH=\"%s:\$PATH\"' >> ~/.zshrc\n" "$bindir"
             ;;
     esac
-    printf '\n  Update: run this installer again.   Uninstall: %s/uninstall.sh\n\n' "$SRC_DIR"
+    printf '\n  Update: run this installer again.\n'
+    printf '  Uninstall: curl -fsSL https://raw.githubusercontent.com/theluckystrike/headroom/main/uninstall.sh | bash\n\n'
 }
 
 main() {
     setup_colors
     banner
     check_macos
-    check_toolchain
-    fetch_source
-    stop_running_app
-    build_and_install
+    if ! install_prebuilt; then
+        check_toolchain
+        fetch_source
+        stop_running_app
+        build_and_install
+    fi
     launch
     next_steps
 }
