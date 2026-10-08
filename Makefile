@@ -6,6 +6,7 @@
 #
 # Variables: HEADROOM_PREFIX=/opt/foo puts the CLI in /opt/foo/bin,
 # BINDIR=... and APPDIR=... override directly, NO_OPEN=1 skips launching,
+# PATH_HINT=0 skips the not-on-PATH hint,
 # UNIVERSAL=1 tries an arm64 + x86_64 build.
 
 SHELL := /bin/bash
@@ -32,57 +33,57 @@ BINDIR ?= $(shell if [ -d "$(LOCALBIN)" ]; then echo "$(LOCALBIN)"; \
 all: app
 
 build:
-	swift build -c release
+	@swift build -c release
 
 app:
-	scripts/build-app.sh
+	@scripts/build-app.sh
 
 test:
-	swift test
+	@swift test
 
 run: app
-	open "$(APP)"
+	@open "$(APP)"
 
 demo: app
-	"$(APP)/Contents/MacOS/Headroom" --demo
+	@"$(APP)/Contents/MacOS/Headroom" --demo
 
 install: app
-	pkill -x Headroom 2>/dev/null || true
-	mkdir -p "$(APPDIR)" "$(BINDIR)"
-	rm -rf "$(APPDIR)/Headroom.app"
-	ditto "$(APP)" "$(APPDIR)/Headroom.app"
-	# Remove before copying: overwriting a signed binary in place can get it killed on launch.
-	rm -f "$(BINDIR)/headroom"
-	cp "$(CLI)" "$(BINDIR)/headroom"
-	chmod 755 "$(BINDIR)/headroom"
-	echo "Installed $(APPDIR)/Headroom.app"
-	echo "Installed $(BINDIR)/headroom"
-	case ":$$PATH:" in *":$(BINDIR):"*) ;; \
-	  *) echo "Note: $(BINDIR) is not on your PATH. Add it, e.g.: echo 'export PATH=\"$(BINDIR):\$$PATH\"' >> ~/.zshrc" ;; esac
-	if [ -z "$(NO_OPEN)" ]; then open "$(APPDIR)/Headroom.app"; fi
+	@pkill -x Headroom 2>/dev/null || true
+	@mkdir -p "$(APPDIR)" "$(BINDIR)"
+	@rm -rf "$(APPDIR)/Headroom.app"
+	@ditto "$(APP)" "$(APPDIR)/Headroom.app"
+# Remove before copying: overwriting a signed binary in place can get it killed on launch.
+	@rm -f "$(BINDIR)/headroom"
+	@cp "$(CLI)" "$(BINDIR)/headroom"
+	@chmod 755 "$(BINDIR)/headroom"
+	@echo "Installed $(APPDIR)/Headroom.app"
+	@echo "Installed $(BINDIR)/headroom"
+	@if [ "$(PATH_HINT)" != 0 ]; then case ":$$PATH:" in *":$(BINDIR):"*) ;; \
+	  *) echo "Note: $(BINDIR) is not on your PATH. Add it, e.g.: echo 'export PATH=\"$(BINDIR):\$$PATH\"' >> ~/.zshrc" ;; esac; fi
+	@if [ -z "$(NO_OPEN)" ]; then open "$(APPDIR)/Headroom.app"; fi
 
 uninstall:
-	pkill -x Headroom 2>/dev/null || true
-	rm -rf "$(APPDIR)/Headroom.app"
-	for d in "$(BINDIR)" "$(LOCALBIN)" /usr/local/bin; do \
-	  if [ -f "$$d/headroom" ] && [ -w "$$d" ]; then rm -f "$$d/headroom" && echo "Removed $$d/headroom"; fi; \
+	@pkill -x Headroom 2>/dev/null || true
+	@rm -rf "$(APPDIR)/Headroom.app"
+	@for d in "$(BINDIR)" "$(LOCALBIN)" /usr/local/bin; do \
+	  if [ -f "$$d/headroom" ] && [ -w "$$d" ] && grep -aq Headroom "$$d/headroom"; then rm -f "$$d/headroom" && echo "Removed $$d/headroom"; fi; \
 	done
-	echo "Removed $(APPDIR)/Headroom.app"
+	@echo "Removed $(APPDIR)/Headroom.app"
 
 zip: app
-	mkdir -p dist
-	rm -f "$(ZIP)" "$(ZIP).sha256"
-	ditto -c -k --keepParent "$(APP)" "$(ZIP)"
-	cd dist && shasum -a 256 "$(notdir $(ZIP))" > "$(notdir $(ZIP)).sha256"
-	echo "$(ZIP)"
-	cat "$(ZIP).sha256"
+	@mkdir -p dist
+	@rm -f "$(ZIP)" "$(ZIP).sha256"
+	@ditto -c -k --keepParent "$(APP)" "$(ZIP)"
+	@cd dist && shasum -a 256 "$(notdir $(ZIP))" > "$(notdir $(ZIP)).sha256"
+	@echo "$(ZIP)"
+	@cat "$(ZIP).sha256"
 
 icon:
-	python3 scripts/make_icon.py
+	@python3 scripts/make_icon.py
 
 lint:
-	bash -n install.sh uninstall.sh scripts/*.sh
-	shellcheck install.sh uninstall.sh scripts/*.sh
+	@bash -n install.sh uninstall.sh scripts/*.sh
+	@shellcheck install.sh uninstall.sh scripts/*.sh
 
 clean:
-	rm -rf build dist .build
+	@rm -rf build dist .build

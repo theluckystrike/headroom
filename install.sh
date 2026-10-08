@@ -114,7 +114,7 @@ stop_running_app() {
 
 build_and_install() {
     say "Building (the first build takes a minute or two)"
-    if ! make -C "$SRC_DIR" install NO_OPEN=1 </dev/null; then
+    if ! make -C "$SRC_DIR" install NO_OPEN=1 PATH_HINT=0 </dev/null; then
         die "Build failed. Output is above. Source is in $SRC_DIR; retry with: make -C $SRC_DIR install"
     fi
 }
