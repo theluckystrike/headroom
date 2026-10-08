@@ -4,7 +4,7 @@ import HeadroomMac
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     static let probeInterval: DispatchTimeInterval = .seconds(2)
-    static let frameInterval: TimeInterval = 0.1 // 10 fps
+    static let frameInterval: TimeInterval = 0.2 // 5 fps: rain cells snap to whole rows, so more frames add cost, not motion
     static let calmBurstDuration: TimeInterval = 6
 
     let settings = AppSettings()

@@ -95,7 +95,7 @@ final class HeaderView: NSView {
         top -= 7 + 10
 
         // Pressure and per-agent estimate.
-        let pressure = "PRESSURE \(m.pressure.rawValue.uppercased())   \(m.freePercent)% FREE"
+        let pressure = "PRESSURE \(m.pressure.rawValue.uppercased())   \(m.totalBytes > 0 ? Int(m.availableBytes * 100 / m.totalBytes) : 0)% FREE"
         top -= drawText(pressure, font: Self.smallFont, color: Palette.color(for: m.pressure), x: left, top: top, glow: false) + 4
         _ = drawText(Self.estimateLine(for: s), font: Self.smallFont, color: Palette.neon.withAlphaComponent(0.85),
                      x: left, top: top, glow: false)
@@ -118,7 +118,7 @@ final class HeaderView: NSView {
         let per = Format.bytes(s.perAgentBytes)
         let count = s.agents.count
         if count == 0 { return "1 agent ~ \(per) (default, none running)" }
-        return "1 agent ~ \(per) (median of \(count) running)"
+        return "1 agent ~ \(per) (mean of \(count) running)"
     }
 
     /// Draws one line with its top edge at `top`; returns the line height.
@@ -200,7 +200,11 @@ final class MenuBuilder: NSObject, NSMenuDelegate {
         let settings = app.settings
 
         header.snapshot = app.snapshot
-        header.reserveBytes = settings.headroomSettings.reserveBytes
+        if let m = app.snapshot?.memory {
+            header.reserveBytes = Estimator.effectiveReserve(memory: m, settings: settings.headroomSettings)
+        } else {
+            header.reserveBytes = settings.headroomSettings.reserveBytes
+        }
         let headerItem = NSMenuItem()
         headerItem.view = header
         menu.addItem(headerItem)
@@ -218,7 +222,8 @@ final class MenuBuilder: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
 
         // Reserve submenu.
-        let reserveItem = NSMenuItem(title: "Reserve: \(settings.reserveGB) GB", action: nil, keyEquivalent: "")
+        let doubled = app.snapshot?.memory.pressure == .warning ? " (x2 under pressure)" : ""
+        let reserveItem = NSMenuItem(title: "Reserve: \(settings.reserveGB) GB\(doubled)", action: nil, keyEquivalent: "")
         let reserveMenu = NSMenu()
         reserveMenu.autoenablesItems = false
         for gb in AppSettings.reserveChoicesGB {

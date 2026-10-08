@@ -38,16 +38,28 @@ public final class ProcessProbe {
     }
 
     /// One pass over the process table.
+    private var argsCache: [Int32: (rawName: String, name: String, args: [String])] = [:]
+    private var pathCache: [Int32: (comm: String, path: String?)] = [:]
+
     public func scan() -> ProcessScan {
-        let pids = listPids()
+        // One sysctl returns ppid, tty and name for every process (what ps uses), instead of one
+        // proc_pidinfo call per pid. Falls back to the per-pid path if the kernel refuses.
+        let table = kinfoTable()
+        let pids = table.map { Array($0.keys) } ?? listPids()
         var procs: [ProcInfo] = []
         procs.reserveCapacity(pids.count)
         var paths: [Int32: String] = [:]
         paths.reserveCapacity(pids.count)
+        var seen = Set<Int32>(minimumCapacity: pids.count)
 
         for pid in pids where pid > 0 {
-            guard let bsd = bsdInfo(pid) else { continue } // exited, or not visible at all
-            let path = executablePath(pid)
+            guard let bsd = table?[pid] ?? bsdInfo(pid) else { continue } // exited, or not visible at all
+            // A pid's executable only changes on exec, which also changes the kernel name; reuse the cached path.
+            let path: String?
+            if let hit = pathCache[pid], hit.comm == bsd.name { path = hit.path } else {
+                path = executablePath(pid)
+                pathCache[pid] = (bsd.name, path)
+            }
             if let path { paths[pid] = path }
 
             var name = path.map(baseName) ?? ""
@@ -55,22 +67,69 @@ public final class ProcessProbe {
             if name.isEmpty { continue }
 
             var args: [String] = []
-            if ProcessProbe.wantsArgs(name: name, path: path) {
+            if let hit = argsCache[pid], hit.rawName == name {
+                // argv of a live process does not change; KERN_PROCARGS2 was ~70% of the scan cost.
+                args = hit.args; name = hit.name
+            } else if ProcessProbe.wantsArgs(name: name, path: path) {
+                let rawName = name
                 args = arguments(pid)
                 // Native installs run a binary named after its version ("2.0.14"); argv[0] says what it is.
                 if ProcessProbe.looksLikeVersion(name), let first = args.first {
                     let argv0 = baseName(first)
                     if !argv0.isEmpty { name = argv0 }
                 }
+                if !args.isEmpty { argsCache[pid] = (rawName, name, args) }
+            } else {
+                // Remember "no args needed" too, so wantsArgs (string work on the path) runs once per pid.
+                argsCache[pid] = (name, name, [])
             }
+            seen.insert(pid)
 
-            procs.append(ProcInfo(pid: pid, ppid: bsd.ppid, tty: bsd.tty, name: name, args: args,
-                                  footprintBytes: footprint(pid)))
+            procs.append(ProcInfo(pid: pid, ppid: bsd.ppid, tty: bsd.tty, name: name, args: args, footprintBytes: 0))
+        }
+        if argsCache.count > seen.count { argsCache = argsCache.filter { seen.contains($0.key) } }
+        if pathCache.count > seen.count { pathCache = pathCache.filter { seen.contains($0.key) } }
+
+        // Footprint is only summed for agent trees, so read it only there (~200 of ~1200 processes).
+        var children: [Int32: [Int]] = [:]
+        for (i, p) in procs.enumerated() where p.ppid != p.pid { children[p.ppid, default: []].append(i) }
+        var stack = procs.indices.filter { AgentClassifier.classify(procs[$0]) != nil }
+        var visited = Set<Int>()
+        while let i = stack.popLast() {
+            guard visited.insert(i).inserted else { continue }
+            procs[i].footprintBytes = footprint(procs[i].pid)
+            stack.append(contentsOf: children[procs[i].pid] ?? [])
         }
         return ProcessScan(procs: procs, paths: paths)
     }
 
     // MARK: - pids
+
+    private func kinfoTable() -> [Int32: Bsd]? {
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
+        var size = 0
+        guard sysctl(&mib, 3, nil, &size, nil, 0) == 0, size > 0 else { return nil }
+        let stride = MemoryLayout<kinfo_proc>.stride
+        size += 64 * stride // processes spawned between the two calls
+        var buf = [kinfo_proc](repeating: kinfo_proc(), count: size / stride)
+        let rc = buf.withUnsafeMutableBytes { sysctl(&mib, 3, $0.baseAddress, &size, nil, 0) }
+        guard rc == 0 else { return nil }
+        let n = size / stride
+        var out: [Int32: Bsd] = [:]
+        out.reserveCapacity(n)
+        for i in 0..<n {
+            let k = buf[i]
+            let pid = k.kp_proc.p_pid
+            guard pid > 0 else { continue }
+            var comm = k.kp_proc.p_comm
+            let name = withUnsafeBytes(of: &comm) { raw -> String in
+                let bytes = raw.prefix { $0 != 0 }
+                return String(decoding: bytes, as: UTF8.self)
+            }
+            out[pid] = Bsd(ppid: k.kp_eproc.e_ppid, tty: ttyName(UInt32(bitPattern: k.kp_eproc.e_tdev)), name: name)
+        }
+        return out
+    }
 
     private func listPids() -> [Int32] {
         // With a NULL buffer proc_listallpids returns the current number of pids.
@@ -108,7 +167,7 @@ public final class ProcessProbe {
         var short = proc_bsdshortinfo()
         let shortSize = Int32(MemoryLayout<proc_bsdshortinfo>.stride)
         if proc_pidinfo(pid, PROC_PIDT_SHORTBSDINFO, 0, &short, shortSize) == shortSize {
-            return Bsd(ppid: Int32(bitPattern: short.pbi_ppid), tty: nil, name: ProcessProbe.cString(short.pbi_comm))
+            return Bsd(ppid: Int32(bitPattern: short.pbsi_ppid), tty: nil, name: ProcessProbe.cString(short.pbsi_comm))
         }
         return nil
     }

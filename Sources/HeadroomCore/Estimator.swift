@@ -4,36 +4,40 @@ public enum Estimator {
     public static let minPerAgentBytes: UInt64 = 150 << 20
     public static let maxPerAgentBytes: UInt64 = 4 << 30
 
-    /// Median of agent treeBytes, clamped to [150 MiB, 4 GiB]; settings.defaultPerAgentBytes when no agents run.
+    /// Mean of agent treeBytes, clamped to [150 MiB, 4 GiB]; settings.defaultPerAgentBytes when no agents run.
+    /// Mean, not median: agent trees are right-skewed (a long Claude Code session with MCP servers can be
+    /// 5x a fresh one) and the total is what has to fit in RAM.
     public static func perAgentBytes(_ agents: [AgentInstance], settings: HeadroomSettings) -> UInt64 {
         if agents.isEmpty { return settings.defaultPerAgentBytes }
-        let sorted = agents.map(\.treeBytes).sorted()
-        let mid = sorted.count / 2
-        let median: UInt64
-        if sorted.count % 2 == 1 {
-            median = sorted[mid]
-        } else {
-            let a = sorted[mid - 1], b = sorted[mid]
-            median = a / 2 + b / 2 + (a % 2 + b % 2) / 2 // overflow-safe mean
-        }
-        return min(max(median, minPerAgentBytes), maxPerAgentBytes)
+        // Each tree is capped at 1 TiB before summing so the total cannot overflow.
+        let total = agents.reduce(UInt64(0)) { $0 + min($1.treeBytes, 1 << 40) }
+        let mean = total / UInt64(agents.count)
+        return min(max(mean, minPerAgentBytes), maxPerAgentBytes)
     }
 
-    /// floor((available - reserve) / perAgent), min 0.
+    /// Reserve actually applied: doubled under warning pressure (the compressor is already working hard).
+    public static func effectiveReserve(memory: MemoryState, settings: HeadroomSettings) -> UInt64 {
+        memory.pressure == .warning ? settings.reserveBytes &* 2 : settings.reserveBytes
+    }
+
+    /// floor((available - reserve) / perAgent), min 0; 0 under critical pressure.
     public static func headroom(memory: MemoryState, perAgentBytes: UInt64, settings: HeadroomSettings) -> Int {
-        guard memory.availableBytes > settings.reserveBytes else { return 0 }
-        let spare = memory.availableBytes - settings.reserveBytes
-        let n = spare / max(perAgentBytes, 1)
+        if memory.pressure == .critical { return 0 }
+        let reserve = effectiveReserve(memory: memory, settings: settings)
+        guard memory.availableBytes > reserve else { return 0 }
+        let n = (memory.availableBytes - reserve) / max(perAgentBytes, 1)
         return n > UInt64(Int.max) ? Int.max : Int(n)
     }
 
+    public static func swapRatio(_ memory: MemoryState) -> Double {
+        memory.swapTotalBytes > 0 ? Double(memory.swapUsedBytes) / Double(memory.swapTotalBytes) : 0
+    }
+
     public static func level(headroom: Int, memory: MemoryState, settings: HeadroomSettings) -> HeadroomLevel {
-        if headroom <= 0 || memory.pressure == .critical { return .danger }
-        if memory.swapTotalBytes > 0,
-           Double(memory.swapUsedBytes) / Double(memory.swapTotalBytes) >= settings.swapDangerRatio {
-            return .danger
-        }
-        if headroom <= 3 || memory.pressure == .warning { return .tight }
+        let swapFull = swapRatio(memory) >= settings.swapDangerRatio
+        let diskLow = memory.diskFreeBytes > 0 && memory.diskFreeBytes < settings.lowDiskBytes
+        if headroom <= 0 || memory.pressure == .critical || (swapFull && diskLow) { return .danger }
+        if headroom <= 3 || memory.pressure == .warning || swapFull { return .tight }
         return .ok
     }
 

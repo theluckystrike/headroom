@@ -26,7 +26,7 @@ jobs:
           xcode-select -p
           swift --version
 
-      # build-app.sh builds the app and CLI products one at a time; see NOTES-ship.md
+      # build-app.sh builds the app and CLI products one at a time (Headroom and headroom-cli; names must differ beyond case on APFS)
       # for why (Headroom and headroom collide on case-insensitive APFS).
       - name: Build Headroom.app
         run: scripts/build-app.sh

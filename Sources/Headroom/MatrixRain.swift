@@ -61,7 +61,7 @@ final class MatrixRain {
         while columns.count < count { columns.append(spawn(initial: true)) }
     }
 
-    /// Advance one frame (10 fps).
+    /// Advance one frame (5 fps).
     func step() {
         frame &+= 1
         let limit = CGFloat(rows)
@@ -88,7 +88,7 @@ final class MatrixRain {
             while k <= col.trail {
                 let row = headRow - k
                 if row >= 0 && row < rows {
-                    var h = col.salt &+ UInt32(truncatingIfNeeded: row) &* 2_654_435_761 &+ ((frame &+ col.salt) / 7)
+                    var h = col.salt &+ UInt32(truncatingIfNeeded: row) &* 2_654_435_761 &+ ((frame &+ col.salt) / 4)
                     h ^= h >> 15
                     h = h &* 2_246_822_519
                     h ^= h >> 13
@@ -124,8 +124,8 @@ final class MatrixRain {
 
     private func spawn(initial: Bool) -> Column {
         let trail = 2 + Int(nextRandom() % 5)
-        // 0.8 to 2.5 rows per second at 10 fps.
-        let speed = 0.08 + unit() * 0.17
+        // 0.8 to 2.5 rows per second at 5 fps.
+        let speed = 0.16 + unit() * 0.34
         let head: CGFloat = initial
             ? unit() * CGFloat(rows + trail)
             : -unit() * CGFloat(rows) * 1.5 // a gap before the column falls again

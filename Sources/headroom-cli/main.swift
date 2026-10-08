@@ -27,7 +27,7 @@ How many more AI coding agents fit in memory before the Mac swaps hard.
   --json             full snapshot as JSON
   --watch, -w        redraw every 2 seconds (Ctrl-C to stop)
   --reserve SIZE     memory kept free for the OS and bursts (default 3G)
-  --per-agent SIZE   cost of one more agent; overrides the measured median (default: measured,
+  --per-agent SIZE   cost of one more agent; overrides the measured mean (default: measured,
                      600M when no agents run)
   --help, -h         this help
   --version, -v      print the version
@@ -115,7 +115,7 @@ func parseOptions(_ argv: [String]) -> Options {
 }
 
 /// Applies --per-agent: unlike settings.defaultPerAgentBytes (used only when no agents run),
-/// the flag replaces the measured median, so headroom and level are recomputed.
+/// the flag replaces the measured mean, so headroom and level are recomputed.
 func applyPerAgent(_ snapshot: Snapshot, perAgent: UInt64?, settings: HeadroomSettings) -> Snapshot {
     guard let perAgent else { return snapshot }
     var s = snapshot
@@ -200,7 +200,7 @@ func render(_ s: Snapshot, settings: HeadroomSettings, perAgentOverridden: Bool,
     // Memory.
     let pressureColor = mem.pressure == .normal ? st.green : (mem.pressure == .warning ? st.amber : st.red)
     out.append("\(st.green)\(st.bold)MEMORY\(st.reset)")
-    out.append("\(st.green)  available   \(Format.bytes(mem.availableBytes)) of \(Format.bytes(mem.totalBytes)) (\(mem.freePercent)% free)\(st.reset)")
+    out.append("\(st.green)  available   \(Format.bytes(mem.availableBytes)) of \(Format.bytes(mem.totalBytes)) (app + wired + compressed = \(Format.bytes(mem.totalBytes > mem.availableBytes ? mem.totalBytes - mem.availableBytes : 0)) used)\(st.reset)")
     out.append("\(st.green)  compressed  \(Format.bytes(mem.compressedBytes))\(st.reset)")
     let swapRatio = mem.swapTotalBytes > 0 ? Double(mem.swapUsedBytes) / Double(mem.swapTotalBytes) : 0
     let swapColor = swapRatio >= settings.swapDangerRatio ? st.red : st.green
@@ -209,6 +209,10 @@ func render(_ s: Snapshot, settings: HeadroomSettings, perAgentOverridden: Bool,
         : "none"
     out.append("\(st.green)  swap        \(swapColor)\(swapText)\(st.reset)")
     out.append("\(st.green)  pressure    \(pressureColor)\(mem.pressure.rawValue)\(st.reset)")
+    if mem.diskFreeBytes > 0 {
+        let diskColor = mem.diskFreeBytes < settings.lowDiskBytes ? st.red : st.green
+        out.append("\(st.green)  disk free   \(diskColor)\(Format.bytes(mem.diskFreeBytes))\(st.reset)\(st.dim) (room for swap to grow)\(st.reset)")
+    }
     out.append("")
 
     // Method.
@@ -218,13 +222,13 @@ func render(_ s: Snapshot, settings: HeadroomSettings, perAgentOverridden: Bool,
     } else if s.agents.isEmpty {
         source = "default, no agents running to measure"
     } else {
-        source = "median of \(s.agents.count) running agent trees, clamped to 150M..4G"
+        source = "mean of \(s.agents.count) running agent trees (incl. MCP servers), clamped to 150M..4G"
     }
-    out.append("\(st.dim)method: (available \(Format.bytes(mem.availableBytes)) - reserve \(Format.bytes(settings.reserveBytes))) / \(Format.bytes(s.perAgentBytes)) per agent = \(n)\(st.reset)")
+    out.append("\(st.dim)method: (available \(Format.bytes(mem.availableBytes)) - reserve \(Format.bytes(Estimator.effectiveReserve(memory: mem, settings: settings)))\(mem.pressure == .warning ? " (2x, warning pressure)" : "")) / \(Format.bytes(s.perAgentBytes)) per agent = \(n)\(st.reset)")
     out.append("\(st.dim)        per agent: \(source)\(st.reset)")
-    out.append("\(st.dim)        available = total x kern.memorystatus_level (what memory_pressure reports as free)\(st.reset)")
+    out.append("\(st.dim)        available = total - (app memory + wired + compressed), as Activity Monitor counts it\(st.reset)")
     if s.level == .danger && n > 0 {
-        out.append("\(st.dim)        level forced to danger: critical pressure or swap above \(Int(settings.swapDangerRatio * 100))%\(st.reset)")
+        out.append("\(st.dim)        level is danger: swap is \(Int(settings.swapDangerRatio * 100))%+ full and the disk is too low for it to grow\(st.reset)")
     }
     return out.joined(separator: "\n")
 }

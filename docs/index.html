@@ -289,7 +289,7 @@ footer .links { display: flex; justify-content: center; flex-wrap: wrap; gap: 18
             <div class="big" id="big">+9</div>
             <div>
               <div class="what" id="what">more agents fit before the 3.0G reserve</div>
-              <div class="why" id="why">at 1.2G per agent (median of your running agents)</div>
+              <div class="why" id="why">at 1.2G per agent (mean of your running agents)</div>
             </div>
           </div>
           <div class="stats">
@@ -331,18 +331,18 @@ footer .links { display: flex; justify-content: center; flex-wrap: wrap; gap: 18
 
     <section id="math">
       <h2>The math</h2>
-<pre class="math"><span class="c"># what macOS can hand out without swapping hard</span>
-available = total &times; kern.memorystatus_level / 100
+<pre class="math"><span class="c"># what Activity Monitor calls free</span>
+available = total - (app memory + wired + compressed)
 
-<span class="c"># what one more agent will cost: median physical footprint
+<span class="c"># what one more agent will cost: mean physical footprint
 # of the running agent process trees, MCP servers included</span>
-per_agent = clamp(median(agent trees), 150M, 4G)   <span class="c"># 600M if none run</span>
+per_agent = clamp(mean(agent trees), 150M, 4G)   <span class="c"># 600M if none run</span>
 
-<span class="g">headroom  = floor((available - reserve) / per_agent)</span>   <span class="c"># reserve 3G</span>
+<span class="g">headroom  = floor((available - reserve) / per_agent)</span>   <span class="c"># reserve 3G, 6G under pressure</span>
 
 <span class="c"># danger when any of these hold</span>
-danger    = headroom == 0  or  pressure == critical  or  swap &ge; 85% used</pre>
-      <p class="note">On a 36 GB Mac at memorystatus_level 41: available is about 14.8G. With 3G reserved and agents at 1.2G each, 9 more fit.</p>
+danger    = headroom == 0  or  pressure == critical  or  (swap &ge; 85% and disk &lt; 10G)</pre>
+      <p class="note">Measured on the author's 36 GB Mac: 29.1G used (11.6G apps + 3.7G wired + 13.8G compressed), 6.9G available, warning pressure so a 6G reserve, 37 agents at 249M each: 3 more fit. Minutes later: 0.</p>
     </section>
 
     <section id="agents">
@@ -467,7 +467,7 @@ danger    = headroom == 0  or  pressure == critical  or  swap &ge; 85% used</pre
     big.textContent = "+" + head;
     document.getElementById("what").textContent =
       (head === 1 ? "more agent fits" : "more agents fit") + " before the 3.0G reserve";
-    document.getElementById("why").textContent = "at " + fmt(state.per) + " per agent (median of your running agents)";
+    document.getElementById("why").textContent = "at " + fmt(state.per) + " per agent (mean of your running agents)";
     document.getElementById("s-ag").textContent = state.ag;
     document.getElementById("s-tty").textContent = state.tty;
     document.getElementById("s-av").textContent = fmt(avail);

@@ -59,8 +59,7 @@ public enum PressureLevel: String, Codable, Sendable { case normal, warning, cri
 
 public struct MemoryState: Equatable, Codable, Sendable {
     public var totalBytes: UInt64
-    /// Memory the system can hand out without swapping hard:
-    /// totalBytes * memorystatus_level / 100 (same number `memory_pressure` prints).
+    /// Memory not in use, in Activity Monitor's terms: total - (app memory + wired + compressed).
     public var availableBytes: UInt64
     /// kern.memorystatus_level, 0...100.
     public var freePercent: Int
@@ -68,11 +67,13 @@ public struct MemoryState: Equatable, Codable, Sendable {
     public var swapUsedBytes: UInt64
     public var swapTotalBytes: UInt64
     public var pressure: PressureLevel
+    /// Free disk space on the swap volume; 0 when unknown. Swap stops growing when this runs out.
+    public var diskFreeBytes: UInt64
     public init(totalBytes: UInt64, availableBytes: UInt64, freePercent: Int, compressedBytes: UInt64,
-                swapUsedBytes: UInt64, swapTotalBytes: UInt64, pressure: PressureLevel) {
+                swapUsedBytes: UInt64, swapTotalBytes: UInt64, pressure: PressureLevel, diskFreeBytes: UInt64 = 0) {
         self.totalBytes = totalBytes; self.availableBytes = availableBytes; self.freePercent = freePercent
         self.compressedBytes = compressedBytes; self.swapUsedBytes = swapUsedBytes; self.swapTotalBytes = swapTotalBytes
-        self.pressure = pressure
+        self.pressure = pressure; self.diskFreeBytes = diskFreeBytes
     }
 }
 
@@ -98,7 +99,7 @@ public struct Snapshot: Equatable, Codable, Sendable {
     public var memory: MemoryState
     public var terminals: TerminalState
     public var agents: [AgentInstance]
-    /// Bytes one more agent is expected to cost (median of running agent trees, or the default).
+    /// Bytes one more agent is expected to cost (mean of running agent trees, or the default).
     public var perAgentBytes: UInt64
     /// How many more agents fit before the reserve is hit. Never negative.
     public var headroomAgents: Int
@@ -116,7 +117,9 @@ public struct HeadroomSettings: Equatable, Codable, Sendable {
     public var reserveBytes: UInt64 = 3 << 30
     /// Cost per agent when none are running to measure. Default 600 MiB.
     public var defaultPerAgentBytes: UInt64 = 600 << 20
-    /// Swap used / total above which the level is forced to danger. Default 0.85.
+    /// Swap used / total at or above which the level is at least tight (danger when the disk is also low). Default 0.85.
     public var swapDangerRatio: Double = 0.85
+    /// Free disk below which nearly full swap cannot grow any more. Default 10 GiB.
+    public var lowDiskBytes: UInt64 = 10 << 30
     public init() {}
 }

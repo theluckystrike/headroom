@@ -13,17 +13,18 @@ final class EstimatorTests: XCTestCase {
         XCTAssertEqual(Estimator.perAgentBytes([], settings: s), 1 * GiB)
     }
 
-    func testMedianOdd() {
+    func testMeanOdd() {
         let a = [agent(bytes: 900 * MiB), agent(bytes: 200 * MiB), agent(bytes: 400 * MiB)]
-        XCTAssertEqual(Estimator.perAgentBytes(a, settings: settings), 400 * MiB)
-    }
-
-    func testMedianEven() {
-        let a = [agent(bytes: 200 * MiB), agent(bytes: 400 * MiB), agent(bytes: 600 * MiB), agent(bytes: 5 * GiB)]
         XCTAssertEqual(Estimator.perAgentBytes(a, settings: settings), 500 * MiB)
     }
 
-    func testMedianEvenOddSumNoOverflow() {
+    func testMeanIsPulledUpByHeavyTrees() {
+        // Median would say 500M; the mean (1580M) is what the RAM actually has to hold.
+        let a = [agent(bytes: 200 * MiB), agent(bytes: 400 * MiB), agent(bytes: 600 * MiB), agent(bytes: 5 * GiB)]
+        XCTAssertEqual(Estimator.perAgentBytes(a, settings: settings), 1580 * MiB)
+    }
+
+    func testMeanNoOverflow() {
         let a = [agent(bytes: UInt64.max), agent(bytes: UInt64.max - 2)]
         XCTAssertEqual(Estimator.perAgentBytes(a, settings: settings), 4 * GiB)
         let b = [agent(bytes: 300 * MiB + 1), agent(bytes: 300 * MiB)]
@@ -87,14 +88,32 @@ final class EstimatorTests: XCTestCase {
         XCTAssertEqual(Estimator.level(headroom: 0, memory: memory(available: 10 * GiB, pressure: .warning), settings: settings), .danger)
     }
 
-    func testSwapDanger() {
-        // Author's Mac: 7.3G of 8G swap used = 0.91 -> danger even with room.
-        let full = memory(available: 14 * GiB, swapUsed: 7 * GiB + 300 * MiB, swapTotal: 8 * GiB)
-        XCTAssertEqual(Estimator.level(headroom: 9, memory: full, settings: settings), .danger)
-        let atRatio = memory(available: 14 * GiB, swapUsed: 85, swapTotal: 100)
-        XCTAssertEqual(Estimator.level(headroom: 9, memory: atRatio, settings: settings), .danger)
+    func testWarningPressureDoublesReserve() {
+        // (10G - 6G) / 1G = 4 under warning, (10G - 3G) / 1G = 7 under normal.
+        XCTAssertEqual(Estimator.headroom(memory: memory(available: 10 * GiB, pressure: .warning), perAgentBytes: 1 * GiB, settings: settings), 4)
+        XCTAssertEqual(Estimator.headroom(memory: memory(available: 10 * GiB), perAgentBytes: 1 * GiB, settings: settings), 7)
+    }
+
+    func testCriticalPressureMeansZero() {
+        XCTAssertEqual(Estimator.headroom(memory: memory(available: 20 * GiB, pressure: .critical), perAgentBytes: 300 * MiB, settings: settings), 0)
+    }
+
+    func testSwapFullIsTightWhileSwapCanGrow() {
+        var full = memory(available: 14 * GiB, swapUsed: 7 * GiB + 300 * MiB, swapTotal: 8 * GiB)
+        full.diskFreeBytes = 80 * GiB
+        XCTAssertEqual(Estimator.level(headroom: 9, memory: full, settings: settings), .tight)
+        let unknownDisk = memory(available: 14 * GiB, swapUsed: 85, swapTotal: 100)
+        XCTAssertEqual(Estimator.level(headroom: 9, memory: unknownDisk, settings: settings), .tight)
         let below = memory(available: 14 * GiB, swapUsed: 84, swapTotal: 100)
         XCTAssertEqual(Estimator.level(headroom: 9, memory: below, settings: settings), .ok)
+    }
+
+    func testSwapFullAndDiskLowIsDanger() {
+        var m = memory(available: 14 * GiB, swapUsed: 85, swapTotal: 100)
+        m.diskFreeBytes = 9 * GiB
+        XCTAssertEqual(Estimator.level(headroom: 9, memory: m, settings: settings), .danger)
+        m.diskFreeBytes = 10 * GiB
+        XCTAssertEqual(Estimator.level(headroom: 9, memory: m, settings: settings), .tight)
     }
 
     func testNoSwapConfiguredIsNotDanger() {
@@ -107,7 +126,9 @@ final class EstimatorTests: XCTestCase {
     func testCustomSwapRatio() {
         var s = settings
         s.swapDangerRatio = 0.5
-        let m = memory(available: 14 * GiB, swapUsed: 4 * GiB, swapTotal: 8 * GiB)
+        var m = memory(available: 14 * GiB, swapUsed: 4 * GiB, swapTotal: 8 * GiB)
+        XCTAssertEqual(Estimator.level(headroom: 9, memory: m, settings: s), .tight)
+        m.diskFreeBytes = 2 * GiB
         XCTAssertEqual(Estimator.level(headroom: 9, memory: m, settings: s), .danger)
     }
 
@@ -134,15 +155,16 @@ final class EstimatorTests: XCTestCase {
     }
 
     func testSnapshotAuthorsMacIsDanger() {
-        // 41% of 36G free, swap 7.3/8G: still "+N" but the level must scream.
-        let m = MemoryState(totalBytes: 36 * GiB, availableBytes: 36 * GiB * 41 / 100, freePercent: 41,
-                            compressedBytes: 6 * GiB, swapUsedBytes: 7 * GiB + 300 * MiB, swapTotalBytes: 8 * GiB,
-                            pressure: .warning)
-        let procs = (0..<11).map { proc(Int32(100 + $0), 1, ["claude"], mb: 250) }
-        let s = Estimator.snapshot(procs: procs, memory: m, terminals: TerminalState(sessions: 131, byApp: [:]),
+        // Measured 2026-10-08 on the author's 36G Mac: 30.7G used (app + wired + compressed),
+        // 5.3G available, warning pressure, 37 agents averaging 249M. 5.3G < 6G reserve -> 0 -> danger.
+        let m = MemoryState(totalBytes: 36 * GiB, availableBytes: 5 * GiB + 300 * MiB, freePercent: 45,
+                            compressedBytes: 14 * GiB, swapUsedBytes: 8 * GiB + 200 * MiB, swapTotalBytes: 9 * GiB,
+                            pressure: .warning, diskFreeBytes: 27 * GiB)
+        let procs = (0..<37).map { proc(Int32(100 + $0), 1, ["claude"], mb: 249) }
+        let s = Estimator.snapshot(procs: procs, memory: m, terminals: TerminalState(sessions: 144, byApp: [:]),
                                    settings: settings, now: 0)
-        XCTAssertEqual(s.perAgentBytes, 250 * MiB)
-        XCTAssertGreaterThan(s.headroomAgents, 0)
+        XCTAssertEqual(s.perAgentBytes, 249 * MiB)
+        XCTAssertEqual(s.headroomAgents, 0)
         XCTAssertEqual(s.level, .danger)
     }
 

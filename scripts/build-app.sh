@@ -32,7 +32,7 @@ cd "$ROOT"
 # The app product "Headroom" and the CLI product "headroom" link to the same path
 # on a case-insensitive APFS volume (the macOS default), so each product is
 # built and copied out to a staging dir before the other one is linked.
-CLI_PRODUCT="${CLI_PRODUCT:-headroom}"
+CLI_PRODUCT="${CLI_PRODUCT:-headroom-cli}"
 STAGE="$BUILD_DIR/.stage"
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
@@ -54,7 +54,7 @@ build_product() { # product dest [swift build flags...]
 }
 
 build_all() { # [swift build flags...]
-    build_product Headroom "$STAGE/Headroom" "$@" && build_product "$CLI_PRODUCT" "$STAGE/headroom" "$@"
+    build_product Headroom "$STAGE/app.bin" "$@" && build_product "$CLI_PRODUCT" "$STAGE/cli.bin" "$@"
 }
 
 BUILT=0
@@ -71,15 +71,15 @@ if [ "$BUILT" = "0" ]; then
     build_all || die "swift build failed (see the output above)."
 fi
 
-if cmp -s "$STAGE/Headroom" "$STAGE/headroom"; then
-    die "The app and CLI binaries are identical, so one product overwrote the other. Rename one product in Package.swift (see NOTES-ship.md)."
+if cmp -s "$STAGE/app.bin" "$STAGE/cli.bin"; then
+    die "The app and CLI binaries are identical, so one product overwrote the other. Product names must differ beyond case on case-insensitive APFS (the CLI product is headroom-cli)."
 fi
 
 # --- assemble the bundle ------------------------------------------------------
 say "Assembling $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$STAGE/Headroom" "$APP/Contents/MacOS/Headroom"
+cp "$STAGE/app.bin" "$APP/Contents/MacOS/Headroom"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
@@ -114,9 +114,9 @@ fi
 # --- CLI ----------------------------------------------------------------------
 # Standalone copy, plus one inside the bundle so the release zip carries it too:
 #   ln -s /Applications/Headroom.app/Contents/Helpers/headroom ~/.local/bin/headroom
-cp "$STAGE/headroom" "$BUILD_DIR/headroom"
+cp "$STAGE/cli.bin" "$BUILD_DIR/headroom"
 mkdir -p "$APP/Contents/Helpers"
-cp "$STAGE/headroom" "$APP/Contents/Helpers/headroom"
+cp "$STAGE/cli.bin" "$APP/Contents/Helpers/headroom"
 rm -rf "$STAGE"
 
 # --- sign ---------------------------------------------------------------------

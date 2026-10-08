@@ -59,9 +59,9 @@ Agents running, terminal sessions, memory available, and the one that matters: h
 ```
 The math is simple and in the README:
 
-available = total x memorystatus_level / 100
-per agent = median footprint of running agent trees, MCP servers included
-headroom = (available - 3G reserve) / per agent
+available = total - (app memory + wired + compressed)
+per agent = mean footprint of running agent trees, MCP servers included
+headroom = (available - 3G reserve, 6G under pressure) / per agent
 
 No network, no telemetry. Native Swift, no dependencies.
 ```

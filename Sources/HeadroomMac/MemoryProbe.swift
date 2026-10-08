@@ -13,7 +13,17 @@ public final class MemoryProbe {
     public func read() -> MemoryState {
         let total = totalBytes
         let freePercent = MemoryProbe.sysctlInt("kern.memorystatus_level").map { Int(min(max($0, 0), 100)) } ?? 0
-        let available = total / 100 * UInt64(freePercent) + (total % 100) * UInt64(freePercent) / 100
+        let vm = vmStats()
+        // Activity Monitor's model: used = app memory (anonymous minus purgeable) + wired + compressed.
+        // available = total - used. memorystatus_level alone over-reports badly once the compressor is
+        // large (measured: 45% "free" while the compressor held 13.8G of RAM and swap was 91% full).
+        let available: UInt64
+        if let vm = vm {
+            let used = vm.appBytes + vm.wiredBytes + vm.compressedBytes
+            available = total > used ? total - used : 0
+        } else {
+            available = total / 100 * UInt64(freePercent) + (total % 100) * UInt64(freePercent) / 100
+        }
 
         let swap = MemoryProbe.swapUsage()
         let pressure: PressureLevel
@@ -25,11 +35,13 @@ public final class MemoryProbe {
         }
 
         return MemoryState(totalBytes: total, availableBytes: available, freePercent: freePercent,
-                           compressedBytes: compressedBytes(), swapUsedBytes: swap.used, swapTotalBytes: swap.total,
-                           pressure: pressure)
+                           compressedBytes: vm?.compressedBytes ?? 0, swapUsedBytes: swap.used, swapTotalBytes: swap.total,
+                           pressure: pressure, diskFreeBytes: MemoryProbe.diskFree())
     }
 
-    private func compressedBytes() -> UInt64 {
+    private struct VM { var appBytes: UInt64; var wiredBytes: UInt64; var compressedBytes: UInt64 }
+
+    private func vmStats() -> VM? {
         var stats = vm_statistics64_data_t()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64_data_t>.stride / MemoryLayout<integer_t>.stride)
         let kr = withUnsafeMutablePointer(to: &stats) { ptr in
@@ -37,8 +49,21 @@ public final class MemoryProbe {
                 host_statistics64(host, HOST_VM_INFO64, $0, &count)
             }
         }
-        guard kr == KERN_SUCCESS else { return 0 }
-        return UInt64(stats.compressor_page_count) * UInt64(vm_kernel_page_size)
+        guard kr == KERN_SUCCESS else { return nil }
+        let page = UInt64(vm_kernel_page_size)
+        let anon = UInt64(stats.internal_page_count), purgeable = UInt64(stats.purgeable_count)
+        return VM(appBytes: (anon > purgeable ? anon - purgeable : 0) * page,
+                  wiredBytes: UInt64(stats.wire_count) * page,
+                  compressedBytes: UInt64(stats.compressor_page_count) * page)
+    }
+
+    /// Free space on the volume that holds the swap files. Swap can only grow while this is not near zero.
+    static func diskFree() -> UInt64 {
+        for path in ["/System/Volumes/VM", "/"] {
+            var fs = statfs()
+            if statfs(path, &fs) == 0 { return UInt64(fs.f_bavail) * UInt64(fs.f_bsize) }
+        }
+        return 0
     }
 
     static func swapUsage() -> (used: UInt64, total: UInt64) {

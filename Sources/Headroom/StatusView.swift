@@ -146,6 +146,7 @@ final class StatusView: NSView {
 
     /// Called at 10 fps by the owner while any animation is active.
     func tick() {
+        if let window, !window.occlusionState.contains(.visible) { return }
         if rainRunning && rainVisible { rain.step() }
         if (rainRunning && rainVisible) || isPulsing { needsDisplay = true }
     }
@@ -169,7 +170,13 @@ final class StatusView: NSView {
             ctx.saveGState()
             ctx.addPath(pillPath)
             ctx.clip()
-            rain.draw(in: ctx, rect: pillRect, intensity: 1)
+            rain.draw(in: ctx, rect: pillRect, intensity: 0.8)
+            // Soft scrim behind the text band: rain stays bright above and below the numbers
+            // but can never sit on top of a digit at full strength.
+            let band = Self.font.capHeight + 6
+            ctx.setFillColor(Palette.pill.withAlphaComponent(0.72).cgColor)
+            ctx.fill(CGRect(x: pillRect.minX + Self.horizontalPadding - 3, y: pillRect.midY - band / 2,
+                            width: pillRect.width - (Self.horizontalPadding - 3) * 2, height: band))
             ctx.restoreGState()
         }
 
@@ -182,18 +189,18 @@ final class StatusView: NSView {
         ctx.setLineWidth(hairline)
         ctx.strokePath()
 
-        // Text: vertically centered on cap height, snapped to the pixel grid.
+        // Text: vertically centered on cap height, snapped to the pixel grid. The glowing text is
+        // rendered once into bitmaps and only blitted per frame: two blurred shadows per frame
+        // cost ~6% CPU at 10 fps, the cached blit is close to free.
         let rawBaseline = pillRect.midY - Self.font.capHeight / 2
         let baseline = (rawBaseline * scale).rounded() / scale
-        ctx.textMatrix = .identity
         var x = pillRect.minX + Self.horizontalPadding
 
         if displayMode != .compact, let mainLine {
-            ctx.saveGState()
-            ctx.setShadow(offset: .zero, blur: 3, color: Palette.neon.withAlphaComponent(0.8).cgColor)
-            ctx.textPosition = CGPoint(x: x, y: baseline)
-            CTLineDraw(mainLine, ctx)
-            ctx.restoreGState()
+            if let image = cachedImage(for: mainLine, width: mainWidth, color: nil, key: "m|\(mainText)", scale: scale) {
+                ctx.draw(image.cg, in: CGRect(x: x - image.pad, y: baseline - image.descent - image.pad,
+                                              width: image.size.width, height: image.size.height))
+            }
             x += mainWidth + Self.segmentGap
         }
 
@@ -205,12 +212,52 @@ final class StatusView: NSView {
                 alpha = 0.45 + 0.55 * CGFloat(0.5 + 0.5 * cos(2 * Double.pi * phase))
             }
             let color = Palette.color(for: level)
-            ctx.saveGState()
-            ctx.setShadow(offset: .zero, blur: 3, color: color.withAlphaComponent(0.8 * alpha).cgColor)
-            ctx.setFillColor(color.withAlphaComponent(alpha).cgColor)
-            ctx.textPosition = CGPoint(x: x, y: baseline)
-            CTLineDraw(plusLine, ctx)
-            ctx.restoreGState()
+            if let image = cachedImage(for: plusLine, width: plusWidth, color: color, key: "p|\(plusText)|\(level.rawValue)", scale: scale) {
+                ctx.saveGState()
+                ctx.setAlpha(alpha)
+                ctx.draw(image.cg, in: CGRect(x: x - image.pad, y: baseline - image.descent - image.pad,
+                                              width: image.size.width, height: image.size.height))
+                ctx.restoreGState()
+            }
         }
+    }
+
+    // MARK: - Text cache
+
+    private struct TextImage { let cg: CGImage; let size: CGSize; let pad: CGFloat; let descent: CGFloat }
+    private var textCache: [String: TextImage] = [:]
+
+    /// Renders a line with a dark halo (keeps digits readable over the rain) and a neon glow.
+    /// `color` nil means the line carries its own colors.
+    private func cachedImage(for line: CTLine, width: CGFloat, color: NSColor?, key: String, scale: CGFloat) -> TextImage? {
+        let fullKey = "\(key)|\(scale)"
+        if let hit = textCache[fullKey] { return hit }
+        let pad: CGFloat = 4
+        var ascent: CGFloat = 0, descent: CGFloat = 0, leading: CGFloat = 0
+        _ = CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
+        let size = CGSize(width: (width + pad * 2).rounded(.up), height: (ascent + descent + pad * 2).rounded(.up))
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let bmp = CGContext(data: nil, width: Int(size.width * scale), height: Int(size.height * scale),
+                                  bitsPerComponent: 8, bytesPerRow: 0, space: space,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        bmp.scaleBy(x: scale, y: scale)
+        bmp.textMatrix = .identity
+        let origin = CGPoint(x: pad, y: pad + descent)
+        let glow = (color ?? Palette.neon).withAlphaComponent(0.8).cgColor
+        if let color { bmp.setFillColor(color.cgColor) }
+        // Dark halo first, then the glow pass on top.
+        bmp.setShadow(offset: .zero, blur: 2.5, color: Palette.pill.withAlphaComponent(1).cgColor)
+        bmp.textPosition = origin
+        CTLineDraw(line, bmp)
+        bmp.textPosition = origin
+        CTLineDraw(line, bmp)
+        bmp.setShadow(offset: .zero, blur: 3, color: glow)
+        bmp.textPosition = origin
+        CTLineDraw(line, bmp)
+        guard let cg = bmp.makeImage() else { return nil }
+        if textCache.count > 16 { textCache.removeAll() }
+        let image = TextImage(cg: cg, size: size, pad: pad, descent: descent)
+        textCache[fullKey] = image
+        return image
     }
 }

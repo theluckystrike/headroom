@@ -2,7 +2,9 @@
 
 How many more AI agents can your Mac take? A Matrix-style menu bar meter for agent fleets.
 
-![Headroom in the macOS menu bar: AG 12, TTY 31, 14.2G free, +9 more agents fit, with the dropdown open](docs/hero.svg)
+![Headroom in the macOS menu bar on the author's Mac: 37 agents, 144 terminals, 5.2G free, 0 more agents fit, with the dropdown open](docs/screenshot.png)
+
+That is a real capture from my Mac while writing this: 37 agents across 144 terminals, swap 92% full, and Headroom saying stop.
 
 Headroom is a tiny native macOS menu bar app. Swift and AppKit, no dependencies, macOS 13 or later. It counts the AI coding agents you have running, the terminal sessions they live in, and the memory you have left, and turns that into one number: how many more agents fit before the Mac starts swapping hard.
 
@@ -24,14 +26,14 @@ AG 12  TTY 31  14.2G  +9
 |---|---|
 | `AG 12` | Agents running. One agent is one root agent process plus everything it spawned (MCP servers, language servers, shells). |
 | `TTY 31` | Terminal sessions. One session is one tty: a tab, a split pane, or a tmux pane. |
-| `14.2G` | Memory macOS can hand out without swapping hard. |
+| `14.2G` | Available memory, counted the way Activity Monitor counts it: total minus app memory, wired and compressed. |
 | `+9` | How many more agents fit before the reserve is hit. This is the number to watch. |
 
 The text sits in neon green `#00FF41` on a near-black pill with faint katakana rain behind it. The level has three states:
 
 - **ok**: 4 or more agents fit.
-- **tight**: 1 to 3 fit.
-- **danger**: 0 fit, or macOS already reports critical memory pressure, or swap is 85% or more used.
+- **tight**: 1 to 3 fit, or macOS reports warning memory pressure, or swap is 85% or more used.
+- **danger**: 0 fit, or macOS reports critical memory pressure, or swap is 85% or more used and the disk has under 10 GB left for swap to grow.
 
 Click the pill for the dropdown: agents per tool with their memory, sessions per terminal app, available memory, swap, pressure, and the per-agent estimate the number is based on.
 
@@ -57,19 +59,20 @@ Both paths install `Headroom.app` and the `headroom` command line tool.
 
 ## The math
 
-Everything comes from three numbers macOS already keeps.
+Everything comes from counters macOS already keeps.
 
 ```
-available  = total * kern.memorystatus_level / 100
-per_agent  = median physical footprint of the running agent process trees,
+available  = total - (app memory + wired + compressed)      # what Activity Monitor calls free
+per_agent  = mean physical footprint of the running agent process trees,
              MCP servers and other children included,
              clamped to [150M, 4G]; 600M when no agents are running
-headroom   = floor((available - reserve) / per_agent), never below 0
-reserve    = 3G by default
-danger     = headroom == 0  or  memory pressure is critical  or  swap >= 85% used
+reserve    = 3G by default, doubled while memory pressure is "warning"
+headroom   = floor((available - reserve) / per_agent), never below 0; 0 under critical pressure
 ```
 
-Worked example from my Mac: 36 GB total, `kern.memorystatus_level` 41, so available is 36 x 41 / 100 = 14.8 GB. With 3 GB reserved and the median agent tree at 1.2 GB, floor(11.8 / 1.2) = 9 more agents fit.
+Worked example, measured on my 36 GB Mac on 2026-10-08: app memory 11.6G + wired 3.7G + compressed 13.8G = 29.1G used, so 6.9G available. 37 agents averaged 249M. Pressure was "warning", so the reserve was 6G: floor((6.9 - 6.0) / 0.249) = 3 more agents. A few minutes later available dropped to 5.3G and the answer became 0.
+
+The first version of Headroom used `kern.memorystatus_level`, the figure `memory_pressure` prints. On the same Mac it said 45% free (16.2G) while the compressor held 13.8G of RAM and swap was 91% full, and the estimate came out at +69 agents. That number would have crashed the machine, so Headroom now uses the stricter count.
 
 The reserve covers the OS, your browser, and the bursts agents make when they run tests or builds. The default per-agent cost is only used until at least one agent is running to measure. The reserve, the default per-agent cost and the swap threshold are settings.
 
@@ -132,9 +135,9 @@ Every Claude Code session then shows the fleet and how many more agents fit, rig
 
 ## Performance
 
-- Polls once every 2 seconds. A full scan targets under 25 ms.
-- The rain animates at 10 fps and pauses in Low Power Mode and while the screen sleeps.
-- Target: under 1% CPU on an M-series Mac.
+- Polls once every 2 seconds. One `sysctl(KERN_PROC_ALL)` call reads the whole process table; argv and executable paths are cached per pid; memory footprints are read only for processes inside agent trees.
+- The rain animates at 5 fps (cells snap to whole rows, so more frames add cost, not motion) and pauses in Low Power Mode, while the screen sleeps, and while the menu bar is hidden.
+- Measured on an M3 Pro with 1,150 processes and 37 agents: 1.2% of one core with rain off, 1.5 to 1.9% with rain on (about 0.2% of the whole CPU), 14 MB of memory.
 
 ## Uninstall
 
@@ -152,14 +155,14 @@ If you added it as a login item, remove it in System Settings > General > Login 
 **Why not just use Activity Monitor?**
 Activity Monitor shows processes, not agents. A single Claude Code session can be a dozen processes: node, several MCP servers, a language server, shells. Activity Monitor also does not know which of your 130 ttys hold agents, and it does not do the division for you. Headroom answers one question, "can I start one more?", without opening a window.
 
-**Why `kern.memorystatus_level` instead of "free" memory?**
-Free memory on macOS is close to zero most of the time by design: the kernel keeps file cache and compressed pages around until something needs the space. `kern.memorystatus_level` is the percentage of memory the kernel considers available before it has to start applying pressure, which is the same figure `memory_pressure` prints. It is the number that predicts swapping, so it is the number that predicts a stall.
+**Why not "free" memory, or `kern.memorystatus_level`?**
+Free memory on macOS is close to zero most of the time by design: the kernel keeps file cache around until something needs the space, so it undercounts. `kern.memorystatus_level` overcounts once the compressor is large: on my Mac it said 45% free while the compressor already held 13.8G of RAM and swap was 91% full. Total minus app memory, wired and compressed is the figure Activity Monitor uses, and it stays honest when the compressor is full.
 
 **Why can an agent be more than a process?**
 Because an agent is a tree, not a process. Claude Code roots are 120 to 390 MB each on my Mac, but the MCP servers, node and python children they spawn can double or triple that. Headroom measures the whole tree, because the whole tree is what the next agent will cost.
 
 **Is the estimate exact?**
-No. It is a median of what your agents use right now, so it adapts to how you work. Agents that start builds or test suites spike above it, which is what the reserve is for. Raise the reserve if you still hit swap.
+No. It is the mean of what your agents use right now, so it adapts to how you work and heavy sessions pull it up. Agents that start builds or test suites spike above it, which is what the reserve is for. Raise the reserve if you still hit swap.
 
 **Does it work on Intel Macs?**
 It should; nothing in it is Apple silicon specific. It is developed and tested on M-series Macs.

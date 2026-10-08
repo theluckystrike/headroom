@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v13)],
     products: [
         .executable(name: "Headroom", targets: ["Headroom"]),
-        .executable(name: "headroom", targets: ["headroom-cli"]),
+        .executable(name: "headroom-cli", targets: ["headroom-cli"]),
         .library(name: "HeadroomCore", targets: ["HeadroomCore"]),
     ],
     targets: [
